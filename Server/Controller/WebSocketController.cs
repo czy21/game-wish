@@ -1,10 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Collections.Concurrent;
-using System.Net;
+using System.Dynamic;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
+using WishServer.Annotation;
+using WishServer.Manager;
 using WishServer.Model;
+using WishServer.Util;
 
 namespace WishServer.Controllers
 {
@@ -12,14 +17,16 @@ namespace WishServer.Controllers
     {
 
         private readonly ILogger<UserController> _logger;
+        private readonly IEnumerable<IMessageHandler> _messageHandlers;
 
-        public WebSocketController(ILogger<UserController> logger)
+        public WebSocketController(ILogger<UserController> logger, IEnumerable<IMessageHandler> messageHandlers)
         {
             _logger = logger;
+            _messageHandlers = messageHandlers;
         }
 
         private static readonly ConcurrentDictionary<string, Session> _clients = new();
-        private static readonly ConcurrentDictionary<string, string[]> _rooms = new();
+        private static readonly ConcurrentDictionary<string, List<string>> _rooms = new();
 
         [Route("/ws")]
         public async Task Get()
@@ -35,15 +42,18 @@ namespace WishServer.Controllers
 
             Session session = new()
             {
+                ClientId = clientId,
                 ConnectionInfo = HttpContext.Connection,
-                WebSocket = webSocket
+                WebSocket = webSocket,
+                AllClients = _clients,
+                AllRooms = _rooms
             };
 
             _clients.TryAdd(clientId, session);
 
             try
             {
-                await ReceiveMessage(clientId, session);
+                await ReceiveMessage(session);
             }
             catch (Exception ex)
             {
@@ -58,7 +68,7 @@ namespace WishServer.Controllers
             }
         }
 
-        private async Task ReceiveMessage(string clientId, Session session)
+        private async Task ReceiveMessage(Session session)
         {
             byte[] buffer = new byte[1024 * 4];
             while (session.WebSocket.State == WebSocketState.Open)
@@ -68,59 +78,71 @@ namespace WishServer.Controllers
                 {
                     break;
                 }
-                await HandleMessage(clientId, session, Encoding.UTF8.GetString(buffer, 0, result.Count));
+                string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                if (message == "ping")
+                {
+                    await session.WebSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("pong")), WebSocketMessageType.Text, true, CancellationToken.None);
+                    return;
+                }
+                MessageDTO? messageDTO = null;
+                try
+                {
+                    messageDTO = JsonUtil.Deserialize<MessageDTO>(message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("JSON deserialize error: {0}", ex.Message);
+                    return;
+                }
+                if (messageDTO == null)
+                {
+                    return;
+                }
+                IMessageHandler? messageHandler = null;
+                MethodInfo? methodInfo = null;
+                foreach (var h in _messageHandlers)
+                {
+                    foreach (var m in h.GetType().GetMethods())
+                    {
+                        foreach (var a in m.GetCustomAttributes())
+                        {
+                            if (a is OnMessage attr && attr.GetKind() == messageDTO.Kind)
+                            {
+                                messageHandler = h;
+                                methodInfo = m;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (methodInfo != null)
+                {
+                    Type parameterInfo = methodInfo.GetParameters()[2].GetModifiedParameterType();
+                    var messageData= JsonSerializer.Deserialize(messageDTO.Data, JsonTypeInfo.CreateJsonTypeInfo<RoomJoinDTO>(JsonUtil.JSON_SERIALIZER_OPTIONS));
+                    Task? task = methodInfo?.Invoke(messageHandler, new object[] { session, messageDTO, messageData }) as Task;
+                    if (task != null) await task;
+                }
             }
         }
 
-        private async Task HandleMessage(string clientId, Session session, string message)
+
+
+        public static List<Task> BroadMessage(Session session, Func<string, string> messageFunc)
         {
-            if (message == "ping")
-            {
-                await session.WebSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("pong")), WebSocketMessageType.Text, true, CancellationToken.None);
-                return;
-            }
-            MessageDTO? messageObj;
-            try
-            {
-                messageObj = JsonSerializer.Deserialize<MessageDTO>(message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("JSON deserialize error: {0}", ex.Message);
-                return;
-            }
-            if (messageObj == null)
-            {
-                return;
-            }
-
-            switch (messageObj.Kind)
-            {
-                case MessageKind.ROOM_CREATE:
-
-                    break;
-                case MessageKind.ROOM_JOIN:
-
-                    break;
-                case MessageKind.ROOM_LEAVE:
-
-                    break;
-
-                default:
-                    break;
-            }
-
             var tasks = new List<Task>();
-            foreach (KeyValuePair<string, Session> t in _clients)
+            List<string> clients = _rooms.Where(t => t.Value.Contains(session.ClientId)).FirstOrDefault().Value;
+            foreach (var t in clients)
             {
-                if (t.Value.WebSocket.State == WebSocketState.Open)
+                if (_clients.TryGetValue(t, out var roomClientSession))
                 {
-                    string messagePush = t.Key == clientId ? string.Format("自己 => {0}", message) : string.Format("{0}:{1} => {2}", session.ConnectionInfo.RemoteIpAddress, session.ConnectionInfo.RemotePort, message);
-                    tasks.Add(t.Value.WebSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(messagePush)), WebSocketMessageType.Text, true, CancellationToken.None));
+                    if (roomClientSession.WebSocket.State == WebSocketState.Open)
+                    {
+                        string message = messageFunc.Invoke(t);
+                        tasks.Add(roomClientSession.WebSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(message)), WebSocketMessageType.Text, true, CancellationToken.None));
+                    }
                 }
             }
-
-            await Task.WhenAll(tasks);
+            return tasks;
         }
     }
 }

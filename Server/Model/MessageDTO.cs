@@ -6,10 +6,9 @@ namespace WishServer.Model
 {
     public class MessageDTO
     {
-        [JsonPropertyName("kind")]
+        
         public MessageKind Kind { get; set; }
 
-        [JsonPropertyName("data")]
         public JsonElement Data { get; set; }
     }
 }
