@@ -12,9 +12,5 @@ namespace WishServer.Model
         public WebSocket WebSocket { get; set; }
 
         public string? UserId { get; set; }
-
-        public ConcurrentDictionary<string, Session> AllClients { get; set; }
-
-        public ConcurrentDictionary<string, List<string>> AllRooms { get; set; }
     }
 }

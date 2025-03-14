@@ -11,13 +11,13 @@ namespace WishServer.Manager
         public async Task HandleRoomJoin(Session session, MessageDTO messageDTO, RoomMessage roomMessage)
         {
             List<Task> tasks = [];
-            if (!session.AllRooms.TryGetValue(roomMessage.ID, out var clientIds))
+            if (!WebSocketController.ROOM_DICT.TryGetValue(roomMessage.ID, out var clientIds))
             {
-                session.AllRooms[roomMessage.ID] = [session.ClientId];
+                WebSocketController.ROOM_DICT[roomMessage.ID] = [session.ClientId];
             }
             else
             {
-                session.AllRooms[roomMessage.ID].Add(session.ClientId);
+                WebSocketController.ROOM_DICT[roomMessage.ID].Add(session.ClientId);
             }
             tasks = WebSocketController.BroadMessage(session, (t) =>
             {

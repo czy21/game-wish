@@ -23,8 +23,8 @@ namespace WishServer.Controllers
             _messageHandlers = messageHandlers;
         }
 
-        private static readonly ConcurrentDictionary<string, Session> _clients = new();
-        private static readonly ConcurrentDictionary<string, List<string>> _rooms = new();
+        public static readonly ConcurrentDictionary<string, Session> CLIENT_DICT = new();
+        public static readonly ConcurrentDictionary<string, List<string>> ROOM_DICT = new();
 
         [Route("/ws")]
         public async Task Get()
@@ -42,21 +42,19 @@ namespace WishServer.Controllers
             {
                 ClientId = clientId,
                 ConnectionInfo = HttpContext.Connection,
-                WebSocket = webSocket,
-                AllClients = _clients,
-                AllRooms = _rooms
+                WebSocket = webSocket
             };
 
-            _clients.TryAdd(clientId, session);
+            CLIENT_DICT.TryAdd(clientId, session);
 
             await ReceiveMessage(session);
 
             if (session.WebSocket.State != WebSocketState.Open)
             {
-                _clients.TryRemove(clientId, out _);
+                CLIENT_DICT.TryRemove(clientId, out _);
                 await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
                 session.WebSocket.Dispose();
-                _logger.LogInformation($"Client {clientId} disconnected. Total clients: {_clients.Count}");
+                _logger.LogInformation($"Client {clientId} disconnected. Total clients: {CLIENT_DICT.Count}");
             }
         }
 
@@ -147,10 +145,10 @@ namespace WishServer.Controllers
         public static List<Task> BroadMessage(Session session, Func<string, object> messageFunc)
         {
             var tasks = new List<Task>();
-            List<string> clients = _rooms.Where(t => t.Value.Contains(session.ClientId)).FirstOrDefault().Value;
+            List<string> clients = ROOM_DICT.Where(t => t.Value.Contains(session.ClientId)).FirstOrDefault().Value;
             foreach (var t in clients)
             {
-                if (_clients.TryGetValue(t, out var roomClientSession))
+                if (CLIENT_DICT.TryGetValue(t, out var roomClientSession))
                 {
                     if (roomClientSession.WebSocket.State == WebSocketState.Open)
                     {
