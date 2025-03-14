@@ -1,4 +1,5 @@
-﻿using WishServer.Annotation;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+using WishServer.Annotation;
 using WishServer.Controllers;
 using WishServer.Model;
 
@@ -11,21 +12,21 @@ namespace WishServer.Manager
         public async Task HandleRoomJoin(Session session, MessageDTO messageDTO, RoomMessage roomMessage)
         {
             List<Task> tasks = [];
-            if (!WebSocketController.ROOM_DICT.TryGetValue(roomMessage.ID, out var clientIds))
-            {
-                WebSocketController.ROOM_DICT[roomMessage.ID] = [session.ClientId];
-            }
-            else
-            {
-                WebSocketController.ROOM_DICT[roomMessage.ID].Add(session.ClientId);
-            }
-            tasks = WebSocketController.BroadMessage(session, (t) =>
+            HashSet<string> clientIds = WebSocketController.ROOM_DICT.AddOrUpdate(roomMessage.ID,
+                k => [session.ClientId],
+                (k, v) =>
+                {
+                    v.Add(session.ClientId);
+                    return v;
+                });
+            tasks = WebSocketController.BroadMessage(session, clientIds, (t) =>
             {
                 RoomMessage dto = new()
                 {
                     Kind = messageDTO.Kind,
                     ID = roomMessage.ID,
-                    Content = t == session.ClientId ? string.Format("加入 => {0}", roomMessage.ID) : string.Format("{0}:{1} 加入 => {2}", session.ConnectionInfo.RemoteIpAddress, session.ConnectionInfo.RemotePort, roomMessage.ID)
+                    Count = clientIds.Count,
+                    Content = t == session.ClientId ? $"加入房间 => {roomMessage.ID}" : $"客户端: {session.ConnectionInfo.RemoteIpAddress}:{session.ConnectionInfo.RemotePort} 加入房间 => {roomMessage.ID}"
                 };
                 return dto;
             });
@@ -38,16 +39,22 @@ namespace WishServer.Manager
         {
             List<Task> tasks = [];
 
-            tasks = WebSocketController.BroadMessage(session, (t) =>
+            if (WebSocketController.ROOM_DICT.TryGetValue(roomMessage.ID, out var clientIds) && clientIds.Contains(session.ClientId))
             {
-                RoomMessage dto = new()
+                tasks = WebSocketController.BroadMessage(session, clientIds, (t) =>
                 {
-                    Kind = messageDTO.Kind,
-                    ID = roomMessage.ID,
-                    Content = t == session.ClientId ? string.Format("自己 => {0}", roomMessage.Content) : string.Format("{0}:{1} => {2}", session.ConnectionInfo.RemoteIpAddress, session.ConnectionInfo.RemotePort, roomMessage.Content)
-                };
-                return dto;
-            });
+                    RoomMessage dto = new()
+                    {
+                        Kind = messageDTO.Kind,
+                        ID = roomMessage.ID,
+                        Count = clientIds.Count,
+                        Content = t == session.ClientId ? $"自己 => {roomMessage.Content}" : $"客户端 {session.ConnectionInfo.RemoteIpAddress}:{session.ConnectionInfo.RemotePort} => {roomMessage.Content}"
+
+                    };
+                    return dto;
+                });
+            }
+
             await Task.WhenAll(tasks);
         }
     }

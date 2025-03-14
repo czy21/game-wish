@@ -35,17 +35,16 @@ namespace WishServer.Controllers
                 return;
             }
 
-            string clientId = Guid.NewGuid().ToString();
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
             Session session = new()
             {
-                ClientId = clientId,
+                ClientId = Guid.NewGuid().ToString(),
                 ConnectionInfo = HttpContext.Connection,
                 WebSocket = webSocket
             };
 
-            CLIENT_DICT.TryAdd(clientId, session);
+            CLIENT_DICT.TryAdd(session.ClientId, session);
 
             byte[] buffer = new byte[1024 * 4];
             while (session.WebSocket.State == WebSocketState.Open)
@@ -71,13 +70,14 @@ namespace WishServer.Controllers
                 }
             }
 
-            if (session.WebSocket.State != WebSocketState.Open)
+            CLIENT_DICT.TryRemove(session.ClientId, out _);
+            foreach (var t in ROOM_DICT.Values)
             {
-                CLIENT_DICT.TryRemove(clientId, out _);
-                await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
-                session.WebSocket.Dispose();
-                _logger.LogInformation($"Client {clientId} disconnected. Total clients: {CLIENT_DICT.Count}");
+                t.RemoveWhere(t => t == session.ClientId);
             }
+            await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
+            session.WebSocket.Dispose();
+            _logger.LogInformation($"Client {session.ClientId} disconnected. Total clients: {CLIENT_DICT.Count}");
         }
 
 
@@ -138,11 +138,10 @@ namespace WishServer.Controllers
         }
 
 
-        public static List<Task> BroadMessage(Session session, Func<string, object> messageFunc)
+        public static List<Task> BroadMessage(Session session, HashSet<string> clientIds, Func<string, object> messageFunc)
         {
             var tasks = new List<Task>();
-            var clients = ROOM_DICT.Where(t => t.Value.Contains(session.ClientId)).FirstOrDefault().Value;
-            foreach (var t in clients)
+            foreach (var t in clientIds)
             {
                 if (CLIENT_DICT.TryGetValue(t, out var roomClientSession))
                 {
