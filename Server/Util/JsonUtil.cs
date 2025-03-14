@@ -1,12 +1,15 @@
-﻿using System.Text.Json;
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace WishServer.Util
 {
     public class JsonUtil
     {
 
-        public static JsonSerializerOptions JSON_SERIALIZER_OPTIONS = new JsonSerializerOptions
+        public static readonly JsonSerializerOptions JSON_SERIALIZER_OPTIONS = new JsonSerializerOptions
         {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
             PropertyNameCaseInsensitive = true
         };
 
@@ -23,6 +26,11 @@ namespace WishServer.Util
         public static TValue? Deserialize<TValue>(JsonElement element)
         {
             return JsonSerializer.Deserialize<TValue>(element, JSON_SERIALIZER_OPTIONS);
+        }
+
+        public static object? Deserialize(JsonElement element, Type returnType)
+        {
+            return JsonSerializer.Deserialize(element, returnType, JSON_SERIALIZER_OPTIONS);
         }
     }
 }

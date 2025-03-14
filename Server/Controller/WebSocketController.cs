@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using WishServer.Annotation;
+using WishServer.Extension;
 using WishServer.Manager;
 using WishServer.Model;
 using WishServer.Util;
@@ -81,7 +82,7 @@ namespace WishServer.Controllers
                 string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
                 if (message == "ping")
                 {
-                    await session.WebSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("pong")), WebSocketMessageType.Text, true, CancellationToken.None);
+                    await session.WebSocket.SendTextAsync("pong");
                     return;
                 }
                 MessageDTO? messageDTO = null;
@@ -117,9 +118,33 @@ namespace WishServer.Controllers
                 }
                 if (methodInfo != null)
                 {
-                    Type parameterInfo = methodInfo.GetParameters()[2].GetModifiedParameterType();
-                    var messageData= JsonSerializer.Deserialize(messageDTO.Data, JsonTypeInfo.CreateJsonTypeInfo<RoomJoinDTO>(JsonUtil.JSON_SERIALIZER_OPTIONS));
-                    Task? task = methodInfo?.Invoke(messageHandler, new object[] { session, messageDTO, messageData }) as Task;
+                    ParameterInfo[] methodParamInfos = methodInfo.GetParameters();
+                    object?[] methodParams = new object[methodParamInfos.Length];
+                    for (int i = 0; i < methodParamInfos.Length; i++)
+                    {
+                        ParameterInfo parameterInfo = methodParamInfos[i];
+                        Type paramType = parameterInfo.ParameterType;
+                        if (paramType == session.GetType())
+                        {
+                            methodParams[i] = session;
+                            continue;
+                        }
+                        if (paramType == messageDTO.GetType())
+                        {
+                            methodParams[i] = messageDTO;
+                            continue;
+                        }
+                        if (typeof(IMessage).IsAssignableFrom(paramType))
+                        {
+                            IMessage? messageObj = (IMessage?)JsonUtil.Deserialize(messageDTO.Data, paramType);
+                            if (messageObj == null) return;
+
+                            messageObj.Kind = messageDTO.Kind;
+                            methodParams[i] = messageObj;
+                            continue;
+                        }
+                    }
+                    Task? task = methodInfo?.Invoke(messageHandler, methodParams) as Task;
                     if (task != null) await task;
                 }
             }
@@ -127,7 +152,7 @@ namespace WishServer.Controllers
 
 
 
-        public static List<Task> BroadMessage(Session session, Func<string, string> messageFunc)
+        public static List<Task> BroadMessage(Session session, Func<string, object> messageFunc)
         {
             var tasks = new List<Task>();
             List<string> clients = _rooms.Where(t => t.Value.Contains(session.ClientId)).FirstOrDefault().Value;
@@ -137,8 +162,8 @@ namespace WishServer.Controllers
                 {
                     if (roomClientSession.WebSocket.State == WebSocketState.Open)
                     {
-                        string message = messageFunc.Invoke(t);
-                        tasks.Add(roomClientSession.WebSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(message)), WebSocketMessageType.Text, true, CancellationToken.None));
+                        object message = messageFunc.Invoke(t);
+                        tasks.Add(roomClientSession.WebSocket.SendJsonAsnyc(message));
                     }
                 }
             }
