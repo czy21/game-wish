@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
-using WishServer.Annotation;
+﻿using WishServer.Annotation;
 using WishServer.Controllers;
 using WishServer.Model;
 
@@ -56,6 +55,39 @@ namespace WishServer.Manager
             }
 
             await Task.WhenAll(tasks);
+        }
+
+        public async Task Exit(Session session)
+        {
+
+            List<Task> tasks = [];
+
+            foreach (var r in WebSocketController.ROOM_DICT)
+            {
+                if (r.Value.Contains(session.ClientId))
+                {
+                    tasks = WebSocketController.BroadMessage(session, r.Value, (t) =>
+                    {
+                        RoomMessage dto = new()
+                        {
+                            Kind = MessageKind.ROOM_LEAVE,
+                            ID = r.Key,
+                            Count = r.Value.Count - 1,
+                            Content = $"客户端 {session.ConnectionInfo.RemoteIpAddress}:{session.ConnectionInfo.RemotePort} => 离开"
+
+                        };
+                        return dto;
+                    });
+                }
+            }
+
+            await Task.WhenAll(tasks);
+
+            foreach (var t in WebSocketController.ROOM_DICT.Values)
+            {
+                t.RemoveWhere(t => t == session.ClientId);
+            }
+
         }
     }
 }

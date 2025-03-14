@@ -70,11 +70,9 @@ namespace WishServer.Controllers
                 }
             }
 
+            await Task.WhenAll(_messageHandlers.Select(t => t.Exit(session)).ToList());
+
             CLIENT_DICT.TryRemove(session.ClientId, out _);
-            foreach (var t in ROOM_DICT.Values)
-            {
-                t.RemoveWhere(t => t == session.ClientId);
-            }
             await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
             session.WebSocket.Dispose();
             _logger.LogInformation($"Client {session.ClientId} disconnected. Total clients: {CLIENT_DICT.Count}");
