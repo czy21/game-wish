@@ -24,7 +24,7 @@ namespace WishServer.Controllers
         }
 
         public static readonly ConcurrentDictionary<string, Session> CLIENT_DICT = new();
-        public static readonly ConcurrentDictionary<string, List<string>> ROOM_DICT = new();
+        public static readonly ConcurrentDictionary<string, HashSet<string>> ROOM_DICT = new();
 
         [Route("/ws")]
         public async Task Get()
@@ -47,19 +47,6 @@ namespace WishServer.Controllers
 
             CLIENT_DICT.TryAdd(clientId, session);
 
-            await ReceiveMessage(session);
-
-            if (session.WebSocket.State != WebSocketState.Open)
-            {
-                CLIENT_DICT.TryRemove(clientId, out _);
-                await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
-                session.WebSocket.Dispose();
-                _logger.LogInformation($"Client {clientId} disconnected. Total clients: {CLIENT_DICT.Count}");
-            }
-        }
-
-        private async Task ReceiveMessage(Session session)
-        {
             byte[] buffer = new byte[1024 * 4];
             while (session.WebSocket.State == WebSocketState.Open)
             {
@@ -68,7 +55,7 @@ namespace WishServer.Controllers
                     WebSocketReceiveResult result = await session.WebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        return;
+                        break;
                     }
                     string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
                     if (message == "ping")
@@ -83,7 +70,16 @@ namespace WishServer.Controllers
                     _logger.LogError($"Error with client {session.ClientId}: {ex.Message}");
                 }
             }
+
+            if (session.WebSocket.State != WebSocketState.Open)
+            {
+                CLIENT_DICT.TryRemove(clientId, out _);
+                await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
+                session.WebSocket.Dispose();
+                _logger.LogInformation($"Client {clientId} disconnected. Total clients: {CLIENT_DICT.Count}");
+            }
         }
+
 
         public async Task HandleMessage(Session session, string message)
         {
@@ -145,7 +141,7 @@ namespace WishServer.Controllers
         public static List<Task> BroadMessage(Session session, Func<string, object> messageFunc)
         {
             var tasks = new List<Task>();
-            List<string> clients = ROOM_DICT.Where(t => t.Value.Contains(session.ClientId)).FirstOrDefault().Value;
+            var clients = ROOM_DICT.Where(t => t.Value.Contains(session.ClientId)).FirstOrDefault().Value;
             foreach (var t in clients)
             {
                 if (CLIENT_DICT.TryGetValue(t, out var roomClientSession))
