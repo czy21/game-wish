@@ -6,16 +6,15 @@ namespace WishServer.Util
     public class JsonUtil
     {
 
-        public static readonly JsonSerializerOptions JSON_SERIALIZER_OPTIONS = new JsonSerializerOptions
+        public static readonly JsonSerializerOptions JSON_SERIALIZER_OPTIONS = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-            PropertyNameCaseInsensitive = true
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
 
         public static string Serialize<TValue>(TValue value)
         {
-            return JsonSerializer.Serialize(value, JSON_SERIALIZER_OPTIONS);
+            return JsonSerializer.Serialize(value,JSON_SERIALIZER_OPTIONS);
         }
 
         public static TValue? Deserialize<TValue>(string json)

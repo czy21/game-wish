@@ -1,19 +1,27 @@
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using System.Text.Json.Serialization;
-using WishServer.Manager;
-using WishServer.Util;
+using WishServer;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+builder.Host.ConfigureContainer<ContainerBuilder>(b =>
+{
+    b.RegisterModule<MessageRegister>();
+});
+
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff ";
+});
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
 
     options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
 
 });
-
-builder.Services.AddScoped<IMessageHandler,RoomManager>();
-builder.Services.AddScoped<IMessageHandler, RankManager>();
 
 var app = builder.Build();
 
