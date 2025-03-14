@@ -6,7 +6,7 @@ namespace WishServer.Manager
     {
         public async Task Exit(Session session)
         {
-            
+            await Task.CompletedTask;
         }
     }
 }

@@ -1,7 +1,9 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Refit;
 using System.Text.Json.Serialization;
 using WishServer;
+using WishServer.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,10 +20,12 @@ builder.Logging.AddSimpleConsole(options =>
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-
     options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-
 });
+
+builder.Services.AddRefitClient<DYAccessTokenClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://developer.toutiao.com/api"));
+
+builder.Services.AddRefitClient<DYWebCastClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://webcast.bytedance.com/api"));
 
 var app = builder.Build();
 
