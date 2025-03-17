@@ -11,7 +11,7 @@ namespace WishServer.Manager
         public async Task HandleRoomJoin(Session session, MessageDTO messageDTO, RoomMessage roomMessage)
         {
             List<Task> tasks = [];
-            HashSet<string> clientIds = WebSocketController.ROOM_DICT.AddOrUpdate(roomMessage.ID,
+            HashSet<string> clientIds = WebSocketController.ROOM_SESSIONS_DICT.AddOrUpdate(roomMessage.ID,
                 k => [session.ClientId],
                 (k, v) =>
                 {
@@ -38,7 +38,7 @@ namespace WishServer.Manager
         {
             List<Task> tasks = [];
 
-            if (WebSocketController.ROOM_DICT.TryGetValue(roomMessage.ID, out var clientIds) && clientIds.Contains(session.ClientId))
+            if (WebSocketController.ROOM_SESSIONS_DICT.TryGetValue(roomMessage.ID, out var clientIds) && clientIds.Contains(session.ClientId))
             {
                 tasks = WebSocketController.BroadMessage(session, clientIds, (t) =>
                 {
@@ -62,7 +62,7 @@ namespace WishServer.Manager
 
             List<Task> tasks = [];
 
-            foreach (var r in WebSocketController.ROOM_DICT)
+            foreach (var r in WebSocketController.ROOM_SESSIONS_DICT)
             {
                 if (r.Value.Contains(session.ClientId))
                 {
@@ -83,7 +83,7 @@ namespace WishServer.Manager
 
             await Task.WhenAll(tasks);
 
-            foreach (var t in WebSocketController.ROOM_DICT.Values)
+            foreach (var t in WebSocketController.ROOM_SESSIONS_DICT.Values)
             {
                 t.RemoveWhere(t => t == session.ClientId);
             }

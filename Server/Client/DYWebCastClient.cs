@@ -7,6 +7,14 @@ namespace WishServer.Client
     {
         [Headers("content-type: application/json")]
         [Post("/webcastmate/info")]
-        DYWebCastInfoRes WebCastMateInfo([Body] DyWebCastInfoReq param, [Header("X-Token")] string accessToken);
+        Task<DYWebCastInfoRes> GetLiveInfo([Body] DYWebCastInfoReq param, [Header("X-Token")] string accessToken);
+
+        [Headers("content-type: application/json")]
+        [Post("/live_data/task/start")]
+        Task<DYLiveDataTaskRes> StartPush([Body] DYLiveDataTaskReq param, [Header("X-Token")] string accessToken);
+
+        [Headers("content-type: application/json")]
+        [Post("/live_data/task/stop")]
+        Task<DYLiveDataTaskRes> StopPush([Body] DYLiveDataTaskReq param, [Header("X-Token")] string accessToken);
     }
 }

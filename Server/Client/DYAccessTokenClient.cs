@@ -7,6 +7,6 @@ namespace WishServer.Client
     {
         [Headers("content-type: application/json")]
         [Post("/apps/v2/token")]
-        DYAccessTokenRes GetAccessTokenRes([Body] DYAccessTokenReq param);
+        Task<DYAccessTokenRes> GetAccessToken([Body] DYAccessTokenReq param);
     }
 }

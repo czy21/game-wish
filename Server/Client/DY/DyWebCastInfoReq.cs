@@ -1,6 +1,6 @@
 ﻿namespace WishServer.Client.DY
 {
-    public class DyWebCastInfoReq
+    public class DYWebCastInfoReq
     {
         public string token {  get; set; }
     }

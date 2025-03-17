@@ -7,24 +7,30 @@ using WishServer.Annotation;
 using WishServer.Extension;
 using WishServer.Manager;
 using WishServer.Model;
+using WishServer.Service;
 using WishServer.Util;
 
 namespace WishServer.Controllers
 {
     public class WebSocketController : ControllerBase
     {
-
         private readonly ILogger<WebSocketController> _logger;
         private readonly IEnumerable<IMessageHandler> _messageHandlers;
+        private readonly Dictionary<PlatformEnum, IPlatformService> _platformServiceDict;
 
-        public WebSocketController(ILogger<WebSocketController> logger, IEnumerable<IMessageHandler> messageHandlers)
+        public WebSocketController(ILogger<WebSocketController> logger,
+            IEnumerable<IMessageHandler> messageHandlers,
+            IEnumerable<IPlatformService> platformServices
+            )
         {
             _logger = logger;
             _messageHandlers = messageHandlers;
+            _platformServiceDict = platformServices.ToDictionary(k => k.GetPlatform(), v => v);
         }
 
-        public static readonly ConcurrentDictionary<string, Session> CLIENT_DICT = new();
-        public static readonly ConcurrentDictionary<string, HashSet<string>> ROOM_DICT = new();
+        public static readonly ConcurrentDictionary<string, Session> CLIENTID_SESION_DICT = new();
+        public static readonly ConcurrentDictionary<string, HashSet<string>> ROOM_SESSIONS_DICT = new();
+        public static readonly ConcurrentDictionary<string, HashSet<string>> ROOM_PLAYERS_DICT = new();
 
         [Route("/ws")]
         public async Task Get()
@@ -35,6 +41,20 @@ namespace WishServer.Controllers
                 return;
             }
 
+            if (!HttpContext.Request.Query.TryGetValue("platform", out var platformStr))
+            {
+                return;
+            }
+
+            if (!Enum.TryParse(typeof(PlatformEnum), platformStr, out var platform))
+            {
+                return;
+            }
+
+            if (!HttpContext.Request.Query.TryGetValue("roomId", out var roomId))
+            {
+                return;
+            }
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
             Session session = new()
@@ -44,7 +64,12 @@ namespace WishServer.Controllers
                 WebSocket = webSocket
             };
 
-            CLIENT_DICT.TryAdd(session.ClientId, session);
+            if (_platformServiceDict.TryGetValue((PlatformEnum)platform, out var platformService))
+            {
+                await platformService.Init(session, roomId);
+            }
+
+            CLIENTID_SESION_DICT.TryAdd(session.ClientId, session);
 
             byte[] buffer = new byte[1024 * 4];
             while (session.WebSocket.State == WebSocketState.Open)
@@ -72,10 +97,10 @@ namespace WishServer.Controllers
 
             await Task.WhenAll(_messageHandlers.Select(t => t.Exit(session)).ToList());
 
-            CLIENT_DICT.TryRemove(session.ClientId, out _);
+            CLIENTID_SESION_DICT.TryRemove(session.ClientId, out _);
             await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
             session.WebSocket.Dispose();
-            _logger.LogInformation($"Client {session.ClientId} disconnected. Total clients: {CLIENT_DICT.Count}");
+            _logger.LogInformation($"Client {session.ClientId} disconnected. Total clients: {CLIENTID_SESION_DICT.Count}");
         }
 
 
@@ -135,13 +160,12 @@ namespace WishServer.Controllers
             }
         }
 
-
         public static List<Task> BroadMessage(Session session, HashSet<string> clientIds, Func<string, object> messageFunc)
         {
             var tasks = new List<Task>();
             foreach (var t in clientIds)
             {
-                if (CLIENT_DICT.TryGetValue(t, out var roomClientSession))
+                if (CLIENTID_SESION_DICT.TryGetValue(t, out var roomClientSession))
                 {
                     if (roomClientSession.WebSocket.State == WebSocketState.Open)
                     {
