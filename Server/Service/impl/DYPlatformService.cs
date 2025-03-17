@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
-using System.Linq;
 using WishServer.Client;
 using WishServer.Client.DY;
+using WishServer.Manager;
 using WishServer.Model;
 
 namespace WishServer.Service.impl
 {
-    public class DYPlatformService : IPlatformService, IHostedService, IDisposable
+    public class DYPlatformService : IPlatformService, IHostedService, IDisposable, IMessageHandler
     {
 
         private readonly ConcurrentDictionary<string, RoomSession> ROOM_SESSION_DICT = new();
@@ -129,6 +129,14 @@ namespace WishServer.Service.impl
             return Task.CompletedTask;
         }
 
-
+        public Task Exit(Session session)
+        {
+            List<string> removeRoomIds = ROOM_SESSION_DICT.Where(t => t.Value.Session.ClientId == session.ClientId).Select(t => t.Key).ToList();
+            foreach (var t in removeRoomIds)
+            {
+                ROOM_SESSION_DICT.TryRemove(t, out _);
+            }
+            return Task.CompletedTask;
+        }
     }
 }

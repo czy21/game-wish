@@ -7,7 +7,6 @@ namespace WishServer.Service
         PlatformEnum GetPlatform();
         string GetAccessTokenKey();
         Task<string?> GetAccessToken();
-
         Task Init(Session session, string? roomId);
     }
 }

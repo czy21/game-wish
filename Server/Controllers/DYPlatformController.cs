@@ -27,5 +27,6 @@ namespace WishServer.Controllers
         {
             return _dyPlatformService.GetLiveInfo(token);
         }
+
     }
 }
