@@ -106,9 +106,15 @@ namespace WishServer.Controllers
 
         public async Task HandleMessage(Session session, string message)
         {
-
+            if (String.IsNullOrEmpty(message))
+            {
+                return;
+            }
             MessageDTO? messageDTO = JsonUtil.Deserialize<MessageDTO>(message);
-            if (messageDTO == null) return;
+            if (messageDTO == null)
+            {
+                return;
+            }
 
             IMessageHandler? messageHandler = null;
             MethodInfo? methodInfo = null;

@@ -11,10 +11,18 @@ namespace WishServer.Client
 
         [Headers("content-type: application/json")]
         [Post("/live_data/task/start")]
-        Task<DYLiveDataTaskRes> StartPush([Body] DYLiveDataTaskReq param, [Header("X-Token")] string accessToken);
+        Task<DYLiveDataTaskRes> StartTaskPush([Body] DYLiveDataTaskReq param, [Header("X-Token")] string accessToken);
 
         [Headers("content-type: application/json")]
         [Post("/live_data/task/stop")]
-        Task<DYLiveDataTaskRes> StopPush([Body] DYLiveDataTaskReq param, [Header("X-Token")] string accessToken);
+        Task<DYLiveDataTaskRes> StopTaskPush([Body] DYLiveDataTaskReq param, [Header("X-Token")] string accessToken);
+
+        [Headers("content-type: application/json")]
+        [Post("/live_data/task/get")]
+        Task<DYLiveDataTaskRes> GetTaskStatus([Body] DYLiveDataTaskReq param, [Header("X-Token")] string accessToken);
+
+        [Headers("content-type: application/json")]
+        [Post("/live_data/ack")]
+        Task<DYLiveDataAckRes> Ack([Body] DYLiveDataAckReq param, [Header("access-token")] string accessToken);
     }
 }

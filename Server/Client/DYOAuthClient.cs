@@ -3,7 +3,7 @@ using WishServer.Client.DY;
 
 namespace WishServer.Client
 {
-    public interface DYAccessTokenClient
+    public interface DYOAuthClient
     {
         [Headers("content-type: application/json")]
         [Post("/apps/v2/token")]

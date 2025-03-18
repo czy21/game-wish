@@ -20,16 +20,27 @@
 
     public class Platform
     {
+        public string AppToken { get; set; }
         public PlatformDY DY { get; set; } = new PlatformDY();
+        public PlatformKS KS { get; set; } = new PlatformKS();
     }
 
+
     public class PlatformDY
+    {
+        public PlatformOAuth OAuth { get; set; }
+    }
+
+    public class PlatformKS
+    {
+        public PlatformOAuth OAuth { get; set; }
+    }
+
+    public class PlatformOAuth
     {
         public string AppId { get; set; }
 
         public string AppSecret { get; set; }
-
-        public string AppToken { get; set; }
     }
 
 

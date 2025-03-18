@@ -1,33 +1,39 @@
 ﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using WishServer.Client;
 using WishServer.Client.DY;
-using WishServer.Manager;
+using WishServer.Extension;
 using WishServer.Model;
+using WishServer.Util;
 
 namespace WishServer.Service.impl
 {
-    public class DYPlatformService : IPlatformService, IHostedService, IDisposable, IMessageHandler
+    public class DYPlatformService : IPlatformService, IHostedService
     {
 
         private readonly ConcurrentDictionary<string, RoomSession> ROOM_SESSION_DICT = new();
 
+        private readonly ILogger<DYPlatformService> _logger;
         private readonly ConfigProperties _config;
         private readonly IDatabase _redisDatabase;
-        private readonly DYAccessTokenClient _dyAccessTokenClient;
+        private readonly DYOAuthClient _dyOAuthClient;
         private readonly DYWebCastClient _dYWebCastClient;
 
         public DYPlatformService(
+            ILogger<DYPlatformService> logger,
             IOptions<ConfigProperties> options,
             IDatabase redisDatabase,
-            DYAccessTokenClient dYAccessTokenClient,
+            DYOAuthClient dYOAuthClient,
             DYWebCastClient dYWebCastClient
             )
         {
+            _logger = logger;
             _config = options.Value;
             _redisDatabase = redisDatabase;
-            _dyAccessTokenClient = dYAccessTokenClient;
+            _dyOAuthClient = dYOAuthClient;
             _dYWebCastClient = dYWebCastClient;
         }
 
@@ -38,22 +44,22 @@ namespace WishServer.Service.impl
 
         public string GetAccessTokenKey()
         {
-            return "DY-" + _config.Platform.DY.AppToken + "-token";
+            return "DY-" + _config.Platform.AppToken + "-token";
         }
 
         public async Task<string?> GetAccessToken()
         {
             DYAccessTokenReq req = new()
             {
-                appid = _config.Platform.DY.AppId,
-                secret = _config.Platform.DY.AppSecret,
+                appid = _config.Platform.DY.OAuth.AppId,
+                secret = _config.Platform.DY.OAuth.AppSecret,
                 grant_type = "client_credential"
             };
 
             string? accessToken = await _redisDatabase.StringGetAsync(GetAccessTokenKey());
             if (accessToken == null)
             {
-                DYAccessTokenRes res = await _dyAccessTokenClient.GetAccessToken(req);
+                DYAccessTokenRes res = await _dyOAuthClient.GetAccessToken(req);
                 if (res.data != null)
                 {
                     accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.data.access_token, TimeSpan.FromSeconds(res.data.expires_in - 30));
@@ -75,7 +81,6 @@ namespace WishServer.Service.impl
 
         public async Task Init(Session session, string? roomId)
         {
-            string? accessToken = await GetAccessToken();
             if (roomId != null)
             {
                 ROOM_SESSION_DICT.AddOrUpdate(roomId, new RoomSession()
@@ -89,39 +94,18 @@ namespace WishServer.Service.impl
             }
         }
 
-        public void Dispose()
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-
-        }
-
-        public async Task StartAsync(CancellationToken cancellationToken)
-        {
-            while (true)
+            _logger.LogInformation("DY Push Check Task is running.");
+            new Timer(
+                async (object? state) =>
             {
-                Thread.Sleep(5000);
                 foreach (var k in ROOM_SESSION_DICT.Keys)
                 {
                     await DoRoomTask(k);
                 }
-            }
-        }
-
-        private async Task DoRoomTask(string roomId)
-        {
-            foreach (var t in ROOM_SESSION_DICT[roomId].Tasks.Where(t => t.TaskStatus != "SUCCESS"))
-            {
-                //string? accessToken = await GetAccessToken();
-                //DYLiveDataTaskRes taskRes = await _dYWebCastClient.StartPush(
-                //    new()
-                //    {
-                //        appid = _config.Platform.DY.AppId,
-                //        roomid = roomId,
-                //        msg_type = t.TaskType
-                //    },
-                //    accessToken);
-                //t.TaskId = taskRes.data.taskid;
-                //t.TaskStatus = "SUCCESS";
-            }
+            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
@@ -129,14 +113,61 @@ namespace WishServer.Service.impl
             return Task.CompletedTask;
         }
 
-        public Task Exit(Session session)
+        private async Task DoRoomTask(string roomId)
         {
-            List<string> removeRoomIds = ROOM_SESSION_DICT.Where(t => t.Value.Session.ClientId == session.ClientId).Select(t => t.Key).ToList();
-            foreach (var t in removeRoomIds)
+            foreach (var t in ROOM_SESSION_DICT[roomId].Tasks.Where(t => t.TaskStatus != "SUCCESS"))
             {
-                ROOM_SESSION_DICT.TryRemove(t, out _);
+                string? accessToken = await GetAccessToken();
+                DYLiveDataTaskRes taskRes = await _dYWebCastClient.StartTaskPush(new()
+                {
+                    appid = _config.Platform.DY.OAuth.AppId,
+                    roomid = roomId,
+                    msg_type = t.TaskType
+                },
+                accessToken);
+                t.TaskId = taskRes.data.taskid;
+                if (!String.IsNullOrEmpty(t.TaskId))
+                {
+                    t.TaskStatus = "SUCCESS";
+                }
             }
-            return Task.CompletedTask;
+        }
+
+        public async Task Exit(Session session)
+        {
+            var removeRooms = ROOM_SESSION_DICT.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
+            foreach (var r in removeRooms)
+            {
+                string? accessToken = await GetAccessToken();
+                foreach (var t in r.Value.Tasks)
+                {
+                    await _dYWebCastClient.StopTaskPush(new()
+                    {
+                        appid = _config.Platform.DY.OAuth.AppId,
+                        roomid = r.Key,
+                        msg_type = t.TaskType
+                    },
+                   accessToken);
+                }
+                ROOM_SESSION_DICT.TryRemove(r.Key, out _);
+            }
+        }
+
+        public async Task OnMessage(string? roomId, string? msgType, List<Dictionary<string, object>> param)
+        {
+            if (roomId == null || param == null)
+            {
+                return;
+            }
+            if (ROOM_SESSION_DICT.TryGetValue(roomId, out var roomSession))
+            {
+                await roomSession.Session.WebSocket.SendJsonAsnyc(
+                    new JsonObject()
+                    {
+                        ["msgType"] = msgType,
+                        ["msg"] = new JsonArray() { param }
+                    });
+            }
         }
     }
 }

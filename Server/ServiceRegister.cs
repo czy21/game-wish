@@ -4,18 +4,20 @@ using WishServer.Service;
 
 namespace WishServer
 {
-    public class MessageRegister : Module
+    public class ServiceRegister : Module
     {
         protected override void Load(ContainerBuilder builder)
         {
             builder.RegisterAssemblyTypes(ThisAssembly)
                 .Where(t => t.IsAssignableTo<IMessageHandler>())
+                .AsSelf()
                 .AsImplementedInterfaces()
-                .InstancePerLifetimeScope();
+                .SingleInstance();
             builder.RegisterAssemblyTypes(ThisAssembly)
                 .Where(t => t.IsAssignableTo<IPlatformService>())
+                .AsSelf()
                 .AsImplementedInterfaces()
-                .InstancePerLifetimeScope();
+                .SingleInstance();
         }
     }
 }

@@ -12,5 +12,6 @@
     public class DYLiveDataTaskData
     {
         public string taskid { set; get; }
+        public int status { set; get; } // int, 取值：1 任务不存在 2任务未启动 3任务运行中
     }
 }

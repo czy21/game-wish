@@ -23,10 +23,17 @@ namespace WishServer.Controllers
          * token 直播伴侣token
          */
         [HttpGet("getLiveInfo")]
-        public Task<DYWebCastInfoRes> GetLiveInfo([FromQuery(Name = "token")] string token)
+        public async Task<DYWebCastInfoRes> GetLiveInfo([FromQuery(Name = "token")] string token)
         {
-            return _dyPlatformService.GetLiveInfo(token);
+            return await _dyPlatformService.GetLiveInfo(token);
         }
 
+        [HttpPost("receive")]
+        public async Task Receive([FromBody] List<Dictionary<string,object>> param)
+        {
+            string? roomId = Request.Headers["x-roomid"];
+            string? msgType = Request.Headers["x-msg-type"];
+            await _dyPlatformService.OnMessage(roomId, msgType, param);
+        }
     }
 }

@@ -8,5 +8,6 @@ namespace WishServer.Service
         string GetAccessTokenKey();
         Task<string?> GetAccessToken();
         Task Init(Session session, string? roomId);
+        Task OnMessage(string? roomId, string? msgType, List<Dictionary<string, object>> param);
     }
 }

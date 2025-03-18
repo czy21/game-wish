@@ -14,7 +14,7 @@ namespace WishServer.Util
 
         public static string Serialize<TValue>(TValue value)
         {
-            return JsonSerializer.Serialize(value,JSON_SERIALIZER_OPTIONS);
+            return JsonSerializer.Serialize(value, JSON_SERIALIZER_OPTIONS);
         }
 
         public static TValue? Deserialize<TValue>(string json)
