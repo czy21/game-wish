@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Demo.Repository;
+using Microsoft.AspNetCore.Mvc;
+using WishServer.Domain;
 using WishServer.Service.impl;
 
 namespace WishServer.Controllers
@@ -8,14 +10,17 @@ namespace WishServer.Controllers
     {
         private readonly ILogger<DYPlatformController> _logger;
         private readonly ABPlatformService _abPlatformService;
+        private readonly IWishUserRepository _wishUserRepository;
 
         public ABPlatformController(
             ILogger<DYPlatformController> logger,
-            ABPlatformService abPlatformService
+            ABPlatformService abPlatformService,
+            IWishUserRepository wishUserRepository
         )
         {
             _logger = logger;
             _abPlatformService = abPlatformService;
+            _wishUserRepository = wishUserRepository;
         }
 
         [HttpPost("receive")]
@@ -24,6 +29,12 @@ namespace WishServer.Controllers
             string? roomId = Request.Headers["x-roomid"];
             string? msgType = Request.Headers["x-msg-type"];
             await _abPlatformService.SendMessages(roomId, msgType, param);
+        }
+
+        [HttpGet("dbTest")]
+        public async Task<WishUserPO?> DBTest([FromQuery(Name = "id")] long id)
+        {
+            return await _wishUserRepository.SelectByIdAsync(id);
         }
     }
 }

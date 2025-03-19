@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using WishServer.Client;
 using WishServer.Client.KS;
 using WishServer.Model;
+using WishServer.Model.KS;
 
 namespace WishServer.Service.impl
 {

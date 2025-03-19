@@ -1,12 +1,12 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
-using Demo.Repository;
 using Microsoft.EntityFrameworkCore;
 using Refit;
 using StackExchange.Redis;
 using System.Text.Json.Serialization;
 using WishServer;
 using WishServer.Client;
+using WishServer.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 

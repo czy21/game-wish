@@ -1,11 +1,17 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Demo.Repository;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
+using System.Net.WebSockets;
+using System.Text.Json;
 using WishServer.Annotation;
 using WishServer.Client;
 using WishServer.Client.DY;
 using WishServer.Extension;
 using WishServer.Model;
+using WishServer.Model.DY;
+using WishServer.Repository.impl;
+using WishServer.Util;
 
 namespace WishServer.Service.impl
 {
@@ -19,13 +25,15 @@ namespace WishServer.Service.impl
         private readonly IDatabase _redisDatabase;
         private readonly DYOAuthClient _dyOAuthClient;
         private readonly DYWebCastClient _dYWebCastClient;
+        private readonly IWishUserRepository _wishUserRepository;
 
         public DYPlatformService(
             ILogger<DYPlatformService> logger,
             IOptions<ConfigProperties> options,
             IDatabase redisDatabase,
             DYOAuthClient dYOAuthClient,
-            DYWebCastClient dYWebCastClient
+            DYWebCastClient dYWebCastClient,
+            IWishUserRepository wishUserRepository
             )
         {
             _logger = logger;
@@ -33,6 +41,7 @@ namespace WishServer.Service.impl
             _redisDatabase = redisDatabase;
             _dyOAuthClient = dYOAuthClient;
             _dYWebCastClient = dYWebCastClient;
+            _wishUserRepository = wishUserRepository;
         }
 
         public PlatformEnum GetPlatform()
@@ -66,13 +75,41 @@ namespace WishServer.Service.impl
             return accessToken;
         }
 
+        private string GetRoomPrefix()
+        {
+            return "DY-RoomId-";
+        }
+
+        private string GetRoomKey(string roomId)
+        {
+            return GetRoomPrefix() + roomId;
+        }
+
         public async Task<DYWebCastInfoRes> GetLiveInfo(string token)
         {
             string? accessToken = await GetAccessToken();
 
             DYWebCastInfoReq param = new() { token = token };
 
-            return await _dYWebCastClient.GetLiveInfo(param, accessToken);
+            DYWebCastInfoRes res = await _dYWebCastClient.GetLiveInfo(param, accessToken);
+
+            if (res.data?.info?.room_id != null)
+            {
+                await _redisDatabase.StringSetAsync(GetRoomKey(res.data.info.room_id.ToString()), JsonUtil.Serialize(res.data.info));
+            }
+
+            return res;
+        }
+
+        private async Task<DYWebCastInfo?> GetRoomInfo(string roomId)
+        {
+            string? roomInfoStr = await _redisDatabase.StringGetAsync(GetRoomKey(roomId));
+            DYWebCastInfo? roomInfo = null;
+            if (!string.IsNullOrEmpty(roomInfoStr))
+            {
+                roomInfo = JsonUtil.Deserialize<DYWebCastInfo>(roomInfoStr);
+            }
+            return roomInfo;
         }
 
         public async Task Init(Session session)
@@ -82,7 +119,7 @@ namespace WishServer.Service.impl
                 return;
             }
 
-            ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new DYRoomSession() { Session = session, }, (k, v) => v);
+            ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new DYRoomSession() { Session = session }, (k, v) => v);
             await DoRoomTask(session.RoomId);
         }
 
@@ -144,6 +181,21 @@ namespace WishServer.Service.impl
             }
         }
 
+        private string GetRoomUserPrefix(string roomId, string userId)
+        {
+            return GetRoomKey(roomId) + "-" + userId + "-";
+        }
+
+        private string GetRoomUserContentKey(string roomId, string userId)
+        {
+            return GetRoomUserPrefix(roomId, userId) + "content";
+        }
+
+        private string GetRoomUserMoneyKey(string roomId, string userId)
+        {
+            return GetRoomUserPrefix(roomId, userId) + "money";
+        }
+
         public async Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param)
         {
             if (roomId == null || param == null)
@@ -153,17 +205,54 @@ namespace WishServer.Service.impl
 
             if (ROOM_SESSION_DICT.TryGetValue(roomId, out var roomSession))
             {
-                await roomSession.Session.WebSocket.SendJsonAsnyc(
-                    new Dictionary<string, object?>()
+                if (roomSession.Session.WebSocket.State == WebSocketState.Open)
+                {
+                    string paramStr = JsonUtil.Serialize(param);
+                    if (msgType == "live_comment")
                     {
-                        ["msgType"] = msgType,
-                        ["msg"] = param
-                    });
+                        List<DYLiveCommentMessage> comments = (JsonUtil.Deserialize<List<DYLiveCommentMessage>>(paramStr) ?? []).Where(t => t.content.EndsWith(" 寄")).ToList();
+                        foreach (var t in comments)
+                        {
+                            await _redisDatabase.ListRightPushAsync(GetRoomUserContentKey(roomId, t.sec_openid), t.content);
+                            await _redisDatabase.KeyExpireAsync(GetRoomUserContentKey(roomId, t.sec_openid), TimeSpan.FromDays(1));
+                            await CaculateMoneyAndSaveContent(roomId, roomSession, t.sec_openid);
+                        }
+                    }
+                    if (msgType == "live_gift")
+                    {
+                        List<DYLiveGiftMessage> gifts = (JsonUtil.Deserialize<List<DYLiveGiftMessage>>(paramStr) ?? []).ToList();
+                        foreach (var t in gifts)
+                        {
+                            await _redisDatabase.StringIncrementAsync(GetRoomUserMoneyKey(roomId, t.sec_openid), t.gift_value);
+                            await _redisDatabase.KeyExpireAsync(GetRoomUserMoneyKey(roomId, t.sec_openid), TimeSpan.FromDays(1));
+                            await CaculateMoneyAndSaveContent(roomId, roomSession, t.sec_openid);
+                        }
+                    }
+                    //await roomSession.Session.WebSocket.SendJsonAsnyc(
+                    //       new Dictionary<string, object?>()
+                    //       {
+                    //           ["msgType"] = msgType,
+                    //           ["msg"] = param
+                    //       });
+                }
             }
         }
 
+        private async Task CaculateMoneyAndSaveContent(string roomId, RoomSession roomSession, string userId)
+        {
+            //DYWebCastInfo? roomInfo = await GetRoomInfo(roomId);
+            //if (roomInfo == null) { return; }
+            string anchorId = "1";
+            long money = await _redisDatabase.StringIncrementAsync(GetRoomUserMoneyKey(roomId, userId), -5000);
+            if (money < 0)
+            {
+                return;
+            }
+            
+        }
+
         [OnMessage(MessageKind.ROOM_REPORT)]
-        public async Task HandleRoomReport(Session session, MessageDTO messageDTO,Dictionary<string,object> message)
+        public async Task HandleRoomReport(Session session, MessageDTO messageDTO)
         {
 
         }

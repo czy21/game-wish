@@ -2,7 +2,7 @@ using WishServer.Domain;
 
 namespace Demo.Repository;
 
-public interface IWishUserRepository : IRepositoryBase
+public interface IWishUserRepository : IRepositoryBase<WishUserPO>
 {
-    Task<WishUserPO?> SelectById(long id);
+    
 }

@@ -1,4 +1,4 @@
-﻿namespace WishServer.Model
+﻿namespace WishServer.Model.KS
 {
     public class KSRoomSession : RoomSession
     {

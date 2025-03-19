@@ -1,4 +1,6 @@
-﻿namespace WishServer.Model
+﻿using WishServer.Client.DY;
+
+namespace WishServer.Model.DY
 {
     public class DYRoomSession : RoomSession
     {

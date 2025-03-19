@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WishServer.Domain;
 
-namespace Demo.Repository;
+namespace WishServer.Repository;
 
 public class DbMasterContext : DbContext
 {
