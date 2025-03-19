@@ -9,5 +9,7 @@ namespace WishServer.Model
         public ConnectionInfo ConnectionInfo { get; set; }
 
         public WebSocket WebSocket { get; set; }
+
+        public string? RoomId {  get; set; }
     }
 }

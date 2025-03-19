@@ -60,7 +60,7 @@ namespace WishServer.Service.impl
             return accessToken;
         }
 
-        public Task Init(Session session, string? roomId)
+        public Task Init(Session session)
         {
             return Task.CompletedTask;
         }

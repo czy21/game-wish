@@ -75,15 +75,15 @@ namespace WishServer.Service.impl
             return await _dYWebCastClient.GetLiveInfo(param, accessToken);
         }
 
-        public async Task Init(Session session, string? roomId)
+        public async Task Init(Session session)
         {
-            if (roomId == null)
+            if (session.RoomId == null)
             {
                 return;
             }
 
-            ROOM_SESSION_DICT.AddOrUpdate(roomId, new DYRoomSession() { Session = session, }, (k, v) => v);
-            await DoRoomTask(roomId);
+            ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new DYRoomSession() { Session = session, }, (k, v) => v);
+            await DoRoomTask(session.RoomId);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)

@@ -48,19 +48,20 @@ namespace WishServer.Controllers
             {
                 return;
             }
-            
+
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
             Session session = new()
             {
                 ClientId = Guid.NewGuid().ToString(),
                 ConnectionInfo = HttpContext.Connection,
-                WebSocket = webSocket
+                WebSocket = webSocket,
+                RoomId = roomId
             };
 
             if (_messageHandlerDict.TryGetValue((PlatformEnum)platform, out var messageHandler))
             {
-                await messageHandler.Init(session, roomId);
+                await messageHandler.Init(session);
             }
 
             CLIENTID_SESION_DICT.TryAdd(session.ClientId, session);
@@ -101,7 +102,7 @@ namespace WishServer.Controllers
         }
 
 
-        public async Task HandleMessage(IMessageHandler? messageHandler, Session session, string message)
+        public async Task HandleMessage(IMessageHandler? messageHandler, Session session,  string message)
         {
             if (string.IsNullOrEmpty(message) || messageHandler == null)
             {

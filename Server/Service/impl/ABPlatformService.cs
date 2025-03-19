@@ -30,13 +30,13 @@ namespace WishServer.Service.impl
             return PlatformEnum.AB;
         }
 
-        public Task Init(Session session, string? roomId)
+        public Task Init(Session session)
         {
-            if (roomId == null)
+            if (session.RoomId == null)
             {
                 return Task.CompletedTask;
             }
-            ROOM_SESSION_DICT.AddOrUpdate(roomId, new RoomSession() { Session = session }, (k, v) => v);
+            ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new RoomSession() { Session = session }, (k, v) => v);
             return Task.CompletedTask;
         }
 
