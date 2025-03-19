@@ -2,12 +2,13 @@
 
 namespace WishServer.Service
 {
-    public interface IPlatformService
+    public interface IMessageHandler
     {
         PlatformEnum GetPlatform();
         string GetAccessTokenKey();
         Task<string?> GetAccessToken();
         Task Init(Session session, string? roomId);
-        Task OnMessage(string? roomId, string? msgType, List<Dictionary<string, object>> param);
+        Task Exit(Session session);
+        Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param);
     }
 }

@@ -7,9 +7,9 @@ using WishServer.Model;
 
 namespace WishServer.Service.impl
 {
-    public class KSPlatformService : IPlatformService
+    public class KSPlatformService : IMessageHandler
     {
-        private readonly ConcurrentDictionary<string, RoomSession> ROOM_SESSION_DICT = new();
+        private readonly ConcurrentDictionary<string, KSRoomSession> ROOM_SESSION_DICT = new();
 
         private readonly ILogger<DYPlatformService> _logger;
         private readonly ConfigProperties _config;
@@ -62,12 +62,17 @@ namespace WishServer.Service.impl
 
         public Task Init(Session session, string? roomId)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
-        public Task OnMessage(string? roomId, string? msgType, List<Dictionary<string, object>> param)
+        public Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
+        }
+
+        public Task Exit(Session session)
+        {
+            return Task.CompletedTask;
         }
     }
 }

@@ -4,7 +4,7 @@ using WishServer.Service.impl;
 
 namespace WishServer.Controllers
 {
-    [Route("platform/dy")]
+    [Route("dy")]
     public class DYPlatformController : Controller
     {
         private readonly ILogger<DYPlatformController> _logger;
@@ -33,7 +33,7 @@ namespace WishServer.Controllers
         {
             string? roomId = Request.Headers["x-roomid"];
             string? msgType = Request.Headers["x-msg-type"];
-            await _dyPlatformService.OnMessage(roomId, msgType, param);
+            await _dyPlatformService.SendMessages(roomId, msgType, param);
         }
     }
 }

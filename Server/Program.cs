@@ -1,12 +1,12 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Demo.Repository;
+using Microsoft.EntityFrameworkCore;
 using Refit;
 using StackExchange.Redis;
 using System.Text.Json.Serialization;
 using WishServer;
 using WishServer.Client;
-using WishServer.Service;
-using WishServer.Service.impl;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +18,8 @@ builder.Host.ConfigureContainer<ContainerBuilder>(b =>
     b.RegisterModule<ServiceRegister>();
 });
 
+builder.Services.AddDbContext<DbMasterContext>(opt => opt.UseMySQL(builder.Configuration.Get<ConfigProperties>()?.Data.MySQL.Url ?? string.Empty));
+
 builder.Logging.AddSimpleConsole(options =>
 {
     options.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff ";
@@ -25,10 +27,10 @@ builder.Logging.AddSimpleConsole(options =>
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    //options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(c => ConnectionMultiplexer.Connect(builder.Configuration.Get<ConfigProperties>()?.Data.Redis.Url));
+builder.Services.AddSingleton<IConnectionMultiplexer>(c => ConnectionMultiplexer.Connect(builder.Configuration.Get<ConfigProperties>()?.Data.Redis.Url ?? string.Empty));
 
 builder.Services.AddSingleton(c => c.GetService<IConnectionMultiplexer>().GetDatabase());
 

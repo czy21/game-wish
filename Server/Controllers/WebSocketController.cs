@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 using WishServer.Annotation;
 using WishServer.Extension;
-using WishServer.Manager;
 using WishServer.Model;
 using WishServer.Service;
 using WishServer.Util;
@@ -15,22 +15,15 @@ namespace WishServer.Controllers
     public class WebSocketController : ControllerBase
     {
         private readonly ILogger<WebSocketController> _logger;
-        private readonly IEnumerable<IMessageHandler> _messageHandlers;
-        private readonly Dictionary<PlatformEnum, IPlatformService> _platformServiceDict;
+        private readonly Dictionary<PlatformEnum, IMessageHandler> _messageHandlerDict;
 
-        public WebSocketController(ILogger<WebSocketController> logger,
-            IEnumerable<IMessageHandler> messageHandlers,
-            IEnumerable<IPlatformService> platformServices
-            )
+        public WebSocketController(ILogger<WebSocketController> logger, IEnumerable<IMessageHandler> messageHandlers)
         {
             _logger = logger;
-            _messageHandlers = messageHandlers;
-            _platformServiceDict = platformServices.ToDictionary(k => k.GetPlatform(), v => v);
+            _messageHandlerDict = messageHandlers.ToDictionary(k => k.GetPlatform(), v => v);
         }
 
         public static readonly ConcurrentDictionary<string, Session> CLIENTID_SESION_DICT = new();
-        public static readonly ConcurrentDictionary<string, HashSet<string>> ROOM_SESSIONS_DICT = new();
-        public static readonly ConcurrentDictionary<string, HashSet<string>> ROOM_PLAYERS_DICT = new();
 
         [Route("/ws")]
         public async Task Get()
@@ -55,6 +48,7 @@ namespace WishServer.Controllers
             {
                 return;
             }
+            
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
             Session session = new()
@@ -64,9 +58,9 @@ namespace WishServer.Controllers
                 WebSocket = webSocket
             };
 
-            if (_platformServiceDict.TryGetValue((PlatformEnum)platform, out var platformService))
+            if (_messageHandlerDict.TryGetValue((PlatformEnum)platform, out var messageHandler))
             {
-                await platformService.Init(session, roomId);
+                await messageHandler.Init(session, roomId);
             }
 
             CLIENTID_SESION_DICT.TryAdd(session.ClientId, session);
@@ -87,7 +81,7 @@ namespace WishServer.Controllers
                         await session.WebSocket.SendTextAsync("pong");
                         continue;
                     }
-                    await HandleMessage(session, message);
+                    await HandleMessage(messageHandler, session, message);
                 }
                 catch (Exception ex)
                 {
@@ -95,7 +89,10 @@ namespace WishServer.Controllers
                 }
             }
 
-            await Task.WhenAll(_messageHandlers.Select(t => t.Exit(session)).ToList());
+            if (messageHandler != null)
+            {
+                await messageHandler.Exit(session);
+            }
 
             CLIENTID_SESION_DICT.TryRemove(session.ClientId, out _);
             await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
@@ -104,35 +101,24 @@ namespace WishServer.Controllers
         }
 
 
-        public async Task HandleMessage(Session session, string message)
+        public async Task HandleMessage(IMessageHandler? messageHandler, Session session, string message)
         {
-            if (String.IsNullOrEmpty(message))
+            if (string.IsNullOrEmpty(message) || messageHandler == null)
             {
                 return;
             }
+
             MessageDTO? messageDTO = JsonUtil.Deserialize<MessageDTO>(message);
             if (messageDTO == null)
             {
                 return;
             }
 
-            IMessageHandler? messageHandler = null;
-            MethodInfo? methodInfo = null;
-            foreach (var h in _messageHandlers)
-            {
-                foreach (var m in h.GetType().GetMethods())
-                {
-                    foreach (var a in m.GetCustomAttributes())
-                    {
-                        if (a is OnMessage attr && attr.GetKind() == messageDTO.Kind)
-                        {
-                            messageHandler = h;
-                            methodInfo = m;
-                            break;
-                        }
-                    }
-                }
-            }
+            MethodInfo? methodInfo = messageHandler.GetType()
+                .GetMethods()
+                .Where(m => m.GetCustomAttributes().Any(a => a is OnMessage attr && attr.GetKind() == messageDTO.Kind))
+                .FirstOrDefault();
+
             if (methodInfo != null)
             {
                 ParameterInfo[] methodParamInfos = methodInfo.GetParameters();
@@ -164,23 +150,6 @@ namespace WishServer.Controllers
                 Task? task = methodInfo?.Invoke(messageHandler, methodParams) as Task;
                 if (task != null) await task;
             }
-        }
-
-        public static List<Task> BroadMessage(Session session, HashSet<string> clientIds, Func<string, object> messageFunc)
-        {
-            var tasks = new List<Task>();
-            foreach (var t in clientIds)
-            {
-                if (CLIENTID_SESION_DICT.TryGetValue(t, out var roomClientSession))
-                {
-                    if (roomClientSession.WebSocket.State == WebSocketState.Open)
-                    {
-                        object message = messageFunc.Invoke(t);
-                        tasks.Add(roomClientSession.WebSocket.SendJsonAsnyc(message));
-                    }
-                }
-            }
-            return tasks;
         }
     }
 }

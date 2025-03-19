@@ -1,20 +1,18 @@
 ﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using WishServer.Client;
 using WishServer.Client.DY;
 using WishServer.Extension;
 using WishServer.Model;
-using WishServer.Util;
 
 namespace WishServer.Service.impl
 {
-    public class DYPlatformService : IPlatformService, IHostedService
+    public class DYPlatformService : IMessageHandler, IHostedService
     {
 
-        private readonly ConcurrentDictionary<string, RoomSession> ROOM_SESSION_DICT = new();
+        private readonly ConcurrentDictionary<string, DYRoomSession> ROOM_SESSION_DICT = new();
 
         private readonly ILogger<DYPlatformService> _logger;
         private readonly ConfigProperties _config;
@@ -72,26 +70,20 @@ namespace WishServer.Service.impl
         {
             string? accessToken = await GetAccessToken();
 
-            DYWebCastInfoReq param = new()
-            {
-                token = token,
-            };
+            DYWebCastInfoReq param = new() { token = token };
+
             return await _dYWebCastClient.GetLiveInfo(param, accessToken);
         }
 
         public async Task Init(Session session, string? roomId)
         {
-            if (roomId != null)
+            if (roomId == null)
             {
-                ROOM_SESSION_DICT.AddOrUpdate(roomId, new RoomSession()
-                {
-                    Session = session,
-                }, (k, v) =>
-                {
-                    return v;
-                });
-                await DoRoomTask(roomId);
+                return;
             }
+
+            ROOM_SESSION_DICT.AddOrUpdate(roomId, new DYRoomSession() { Session = session, }, (k, v) => v);
+            await DoRoomTask(roomId);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -99,12 +91,13 @@ namespace WishServer.Service.impl
             _logger.LogInformation("DY Push Check Task is running.");
             new Timer(
                 async (object? state) =>
-            {
-                foreach (var k in ROOM_SESSION_DICT.Keys)
                 {
-                    await DoRoomTask(k);
-                }
-            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+                    foreach (var k in ROOM_SESSION_DICT.Keys)
+                    {
+                        await DoRoomTask(k);
+                    }
+                },
+                null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
             return Task.CompletedTask;
         }
 
@@ -123,10 +116,9 @@ namespace WishServer.Service.impl
                     appid = _config.Platform.DY.OAuth.AppId,
                     roomid = roomId,
                     msg_type = t.TaskType
-                },
-                accessToken);
+                }, accessToken);
                 t.TaskId = taskRes.data.taskid;
-                if (!String.IsNullOrEmpty(t.TaskId))
+                if (!string.IsNullOrEmpty(t.TaskId))
                 {
                     t.TaskStatus = "SUCCESS";
                 }
@@ -146,26 +138,26 @@ namespace WishServer.Service.impl
                         appid = _config.Platform.DY.OAuth.AppId,
                         roomid = r.Key,
                         msg_type = t.TaskType
-                    },
-                   accessToken);
+                    }, accessToken);
                 }
                 ROOM_SESSION_DICT.TryRemove(r.Key, out _);
             }
         }
 
-        public async Task OnMessage(string? roomId, string? msgType, List<Dictionary<string, object>> param)
+        public async Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param)
         {
             if (roomId == null || param == null)
             {
                 return;
             }
+
             if (ROOM_SESSION_DICT.TryGetValue(roomId, out var roomSession))
             {
                 await roomSession.Session.WebSocket.SendJsonAsnyc(
-                    new JsonObject()
+                    new Dictionary<string, object?>()
                     {
                         ["msgType"] = msgType,
-                        ["msg"] = new JsonArray() { param }
+                        ["msg"] = param
                     });
             }
         }

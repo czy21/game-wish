@@ -6,16 +6,22 @@
         public ConfigData Data { get; set; } = new ConfigData();
     }
 
-
     public class ConfigData
     {
-        public ConfigRedis Redis { get; set; } = new ConfigRedis();
+        public ConfigDataRedis Redis { get; set; } = new ConfigDataRedis();
+
+        public ConfigDataMySQL MySQL { get; set; } = new ConfigDataMySQL();
     }
 
-    public class ConfigRedis
+    public class ConfigDataRedis
     {
         public string Url { get; set; }
-        public string Prefix { get; set; }
+    }
+
+    public class ConfigDataMySQL
+    {
+        public string Url { get; set; } 
+    
     }
 
     public class Platform
