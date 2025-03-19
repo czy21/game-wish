@@ -9,6 +9,7 @@
         ROOM_CREATE = 1001,
         ROOM_JOIN = 1002,
         ROOM_LEAVE = 1003,
-        ROOM_CHAT = 1004
+        ROOM_CHAT = 1004,
+        ROOM_REPORT = 1005
     }
 }

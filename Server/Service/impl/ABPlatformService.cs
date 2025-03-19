@@ -3,6 +3,7 @@ using StackExchange.Redis;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using WishServer.Annotation;
 using WishServer.Client;
 using WishServer.Extension;
 using WishServer.Model;
@@ -77,5 +78,12 @@ namespace WishServer.Service.impl
                     });
             }
         }
+
+        [OnMessage(MessageKind.ROOM_REPORT)]
+        public async Task HandleRoomReport(Session session, MessageDTO messageDTO)
+        {
+
+        }
     }
+
 }

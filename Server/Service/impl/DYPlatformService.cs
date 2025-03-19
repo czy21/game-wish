@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
-using System.Text.Json.Nodes;
+using WishServer.Annotation;
 using WishServer.Client;
 using WishServer.Client.DY;
 using WishServer.Extension;
@@ -160,6 +160,12 @@ namespace WishServer.Service.impl
                         ["msg"] = param
                     });
             }
+        }
+
+        [OnMessage(MessageKind.ROOM_REPORT)]
+        public async Task HandleRoomReport(Session session, MessageDTO messageDTO,Dictionary<string,object> message)
+        {
+
         }
     }
 }

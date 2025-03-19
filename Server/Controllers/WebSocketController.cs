@@ -66,6 +66,8 @@ namespace WishServer.Controllers
 
             CLIENTID_SESION_DICT.TryAdd(session.ClientId, session);
 
+            _logger.LogInformation($"Client {session.ClientId} connected. Total clients: {CLIENTID_SESION_DICT.Count}");
+
             byte[] buffer = new byte[1024 * 4];
             while (session.WebSocket.State == WebSocketState.Open)
             {
