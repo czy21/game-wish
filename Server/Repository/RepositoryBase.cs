@@ -1,6 +1,6 @@
 ﻿using Demo.Repository;
 using Microsoft.EntityFrameworkCore;
-using WishServer.Domain;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace WishServer.Repository
 {
@@ -25,14 +25,24 @@ namespace WishServer.Repository
             return await _context.Set<T>().FindAsync(id);
         }
 
-        public async Task InsertAsync(T po)
+        public async Task InsertAsync(T po, bool autoCommit = true)
         {
             await _dbSet.AddAsync(po);
+            
+            if (autoCommit)
+            {
+                await SaveChangesAsync();
+            }
         }
 
-        public async Task DeleteByIdAsync(object id)
+        public async Task<int> DeleteByIdAsync(object id)
         {
-            await _dbSet.Where(t => EF.Property<object>(t, "Id").Equals(id)).ExecuteDeleteAsync();
+            return await _dbSet.Where(t => EF.Property<object>(t, "Id").Equals(id)).ExecuteDeleteAsync();
+        }
+
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
         }
     }
 }

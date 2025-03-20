@@ -1,6 +1,7 @@
 ﻿using Demo.Repository;
 using Microsoft.AspNetCore.Mvc;
 using WishServer.Domain;
+using WishServer.Model;
 using WishServer.Service.impl;
 
 namespace WishServer.Controllers
@@ -34,7 +35,12 @@ namespace WishServer.Controllers
         [HttpGet("dbTest")]
         public async Task DBTest([FromQuery(Name = "id")] long id)
         {
-             await _wishUserRepository.DeleteByIdAsync(id);
+            WishUserPO u1 = new()
+            {
+                Platform = PlatformEnum.DY.ToString(),
+            };
+            await _wishUserRepository.InsertAsync(u1);
+            await _wishUserRepository.DeleteByIdAsync(id);
         }
     }
 }
