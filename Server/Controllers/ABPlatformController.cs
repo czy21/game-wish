@@ -32,9 +32,9 @@ namespace WishServer.Controllers
         }
 
         [HttpGet("dbTest")]
-        public async Task<WishUserPO?> DBTest([FromQuery(Name = "id")] long id)
+        public async Task DBTest([FromQuery(Name = "id")] long id)
         {
-            return await _wishUserRepository.SelectByIdAsync(id);
+             await _wishUserRepository.DeleteByIdAsync(id);
         }
     }
 }

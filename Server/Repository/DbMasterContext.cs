@@ -9,5 +9,5 @@ public class DbMasterContext : DbContext
     {
     }
 
-    public DbSet<WishUserPO?> WishUsers { get; set; }
+    public DbSet<WishUserPO> WishUser { get; set; }
 }

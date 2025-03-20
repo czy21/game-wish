@@ -4,5 +4,5 @@ namespace Demo.Repository;
 
 public interface IWishUserRepository : IRepositoryBase<WishUserPO>
 {
-    
+
 }

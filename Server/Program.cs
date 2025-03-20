@@ -24,6 +24,8 @@ builder.Host.ConfigureContainer<ContainerBuilder>(b =>
 
 builder.Services.AddDbContext<DbMasterContext>(opt => opt.UseMySQL(builder.Configuration.Get<ConfigProperties>()?.Data.MySQL.Url ?? string.Empty));
 
+builder.Services.ConfigureDbContext<DbMasterContext>(opt => opt.EnableSensitiveDataLogging());
+
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     //options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;

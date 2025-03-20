@@ -248,7 +248,6 @@ namespace WishServer.Service.impl
             {
                 return;
             }
-            
         }
 
         [OnMessage(MessageKind.ROOM_REPORT)]
