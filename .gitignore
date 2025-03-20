@@ -45,3 +45,4 @@ msbuild.wrn
 
 *.log
 *.rar
+*.tar.gz
