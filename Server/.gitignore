@@ -1,1 +1,2 @@
-appsettings.dev.json
+appsettings*.json
+!appsettings.json

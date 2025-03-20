@@ -1,14 +1,18 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using NLog.Web;
 using Refit;
 using StackExchange.Redis;
-using System.Text.Json.Serialization;
 using WishServer;
 using WishServer.Client;
 using WishServer.Repository;
 
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Host.UseNLog();
 
 builder.Services.Configure<ConfigProperties>(builder.Configuration.Bind);
 
@@ -19,11 +23,6 @@ builder.Host.ConfigureContainer<ContainerBuilder>(b =>
 });
 
 builder.Services.AddDbContext<DbMasterContext>(opt => opt.UseMySQL(builder.Configuration.Get<ConfigProperties>()?.Data.MySQL.Url ?? string.Empty));
-
-builder.Logging.AddSimpleConsole(options =>
-{
-    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff ";
-});
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {

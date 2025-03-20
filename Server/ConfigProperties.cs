@@ -2,6 +2,7 @@
 {
     public class ConfigProperties
     {
+        public string AppName { get; set; }
         public Platform Platform { get; set; } = new Platform();
         public ConfigData Data { get; set; } = new ConfigData();
     }
