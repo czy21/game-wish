@@ -1,6 +1,6 @@
 using WishServer.Domain;
 
-namespace Demo.Repository;
+namespace WishServer.Repository;
 
 public interface IWishUserRepository : IRepositoryBase<WishUserPO>
 {

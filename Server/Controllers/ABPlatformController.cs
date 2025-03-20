@@ -1,7 +1,7 @@
-﻿using Demo.Repository;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using WishServer.Domain;
 using WishServer.Model;
+using WishServer.Repository;
 using WishServer.Service.impl;
 
 namespace WishServer.Controllers
@@ -39,6 +39,7 @@ namespace WishServer.Controllers
             {
                 Platform = PlatformEnum.DY.ToString(),
             };
+            
             await _wishUserRepository.InsertAsync(u1);
             await _wishUserRepository.DeleteByIdAsync(id);
         }

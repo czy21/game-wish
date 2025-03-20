@@ -1,5 +1,4 @@
-﻿using Demo.Repository;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
@@ -10,6 +9,7 @@ using WishServer.Client.DY;
 using WishServer.Extension;
 using WishServer.Model;
 using WishServer.Model.DY;
+using WishServer.Repository;
 using WishServer.Repository.impl;
 using WishServer.Util;
 

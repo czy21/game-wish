@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace Demo.Repository;
+namespace WishServer.Repository;
 
 public interface IRepositoryBase<T> where T : class
 {
 
     DbSet<T> GetDbSet();
 
-    Task InsertAsync(T po, bool autoCommit = true);
+    Task InsertAsync(T po, bool ignoreNull = true, bool autoCommit = true);
 
     Task<T?> SelectByIdAsync(object id);
 

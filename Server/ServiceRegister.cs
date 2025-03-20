@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using Demo.Repository;
+using WishServer.Repository;
 using WishServer.Service;
 
 namespace WishServer

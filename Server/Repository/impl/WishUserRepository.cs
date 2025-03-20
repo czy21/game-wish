@@ -1,4 +1,3 @@
-using Demo.Repository;
 using WishServer.Domain;
 
 namespace WishServer.Repository.impl;

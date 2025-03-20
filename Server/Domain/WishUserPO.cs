@@ -5,7 +5,7 @@ namespace WishServer.Domain;
 [Table(name: "wish_user")]
 public class WishUserPO : BaseEntity<long, string>
 {
-    [Column(name: "platform")] public string Platform { get; set; }
+    [Column(name: "platform")] public string? Platform { get; set; }
 
     [Column(name: "room_id")] public string? RoomId { get; set; }
 
