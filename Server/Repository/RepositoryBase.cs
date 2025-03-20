@@ -18,11 +18,6 @@ namespace WishServer.Repository
             return _dbSet;
         }
 
-        public async Task<T?> SelectByIdAsync(object id)
-        {
-            return await _context.Set<T>().FindAsync(id);
-        }
-
         public async Task InsertAsync(T po, bool ignoreNull = true, bool autoCommit = true)
         {
             if (ignoreNull)
@@ -51,6 +46,31 @@ namespace WishServer.Repository
             }
         }
 
+        public Task UpdateAsync(T po)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task UpdateByIdAsync(object id, T po)
+        {
+            var entry = _context.Entry(po);
+
+            var props = entry.Properties.Where(p => p.CurrentValue != null && p.Metadata.GetColumnName() != "id").ToList();
+
+            string values = string.Join(",", Enumerable.Range(0, props.Count).Select(t => $"set {props[t].Metadata.GetColumnName()} = @p{t + 1}").ToList());
+
+            string sql = $"update {entry.Metadata.GetTableName()} {values} where id = @p0";
+
+            object[]? parameters = props.Select(p => p.CurrentValue ?? DBNull.Value).ToArray();
+
+            await _context.Database.ExecuteSqlRawAsync(sql, [id, .. parameters]);
+        }
+
+        public async Task<T?> SelectByIdAsync(object id)
+        {
+            return await _context.Set<T>().FindAsync(id);
+        }
+
         public async Task<int> DeleteByIdAsync(object id)
         {
             return await _dbSet.Where(t => EF.Property<object>(t, "Id").Equals(id)).ExecuteDeleteAsync();
@@ -60,5 +80,7 @@ namespace WishServer.Repository
         {
             return await _context.SaveChangesAsync();
         }
+
+
     }
 }

@@ -37,11 +37,10 @@ namespace WishServer.Controllers
         {
             WishUserPO u1 = new()
             {
-                Platform = PlatformEnum.DY.ToString(),
+                Platform = PlatformEnum.KS.ToString(),
             };
             
             await _wishUserRepository.InsertAsync(u1);
-            await _wishUserRepository.DeleteByIdAsync(id);
         }
     }
 }
