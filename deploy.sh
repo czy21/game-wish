@@ -3,8 +3,10 @@ cd $(cd "$(dirname "$0")"; pwd)
 
 source build.sh
 
-if [ ! -f "api.tar.gz" ];then
-  echo "api.tar.gz not exists"
+api_archive_file=api.tar.gz
+
+if [ ! -f "${api_archive_file}" ];then
+  echo "${api_archive_file} not exists"
   exit 0
 fi
 
@@ -17,8 +19,12 @@ while getopts "h:n:" opt;do
     esac
 done;
 
-ssh $target_host "mkdir -p /home/app/${target_name}/"
-scp api.tar.gz $target_host:/home/app/${target_name}/
-ssh $target_host "cd /home/app/${target_name}/;tar -zxvf api.tar.gz;chmod +x api;rm -fv api.tar.gz"
+if [ -n "${target_host}" ];then
 
-ssh $target_host "bash script/start-api.sh -n ${target_name} -c dotnet -d /home/app/${target_name}"
+  ssh $target_host "mkdir -p /home/app/${target_name}/"
+  scp ${api_archive_file} $target_host:/home/app/${target_name}/
+  ssh $target_host "cd /home/app/${target_name}/;tar -zxvf ${api_archive_file};chmod +x api;rm -fv ${api_archive_file}"
+
+  ssh $target_host "bash script/start-api.sh -n ${target_name} -c dotnet -d /home/app/${target_name}"
+  
+fi
