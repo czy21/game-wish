@@ -10,13 +10,13 @@ namespace WishServer
         {
 
             builder.RegisterAssemblyTypes(ThisAssembly)
-                .AsClosedTypesOf(typeof(IRepositoryBase<>))
+                .AsClosedTypesOf(typeof(IRepositoryBase<,>))
                 .AsSelf()
                 .AsImplementedInterfaces()
                 .SingleInstance();
 
             builder.RegisterAssemblyTypes(ThisAssembly)
-                .Where(t => t.IsAssignableTo<IMessageHandler>())
+                .Where(t => t.IsAssignableTo<IServiceBase>() || t.IsAssignableTo<IMessageHandler>())
                 .AsSelf()
                 .AsImplementedInterfaces()
                 .SingleInstance();

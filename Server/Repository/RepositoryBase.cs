@@ -2,14 +2,14 @@
 
 namespace WishServer.Repository
 {
-    public class RepositoryBase<T> : IRepositoryBase<T> where T : class
+    public class RepositoryBase<K, T> : IRepositoryBase<K, T> where T : class
     {
-        protected readonly DbMasterContext _context;
+        protected readonly DbMasterContext _dbContext;
         protected readonly DbSet<T> _dbSet;
 
         public RepositoryBase(DbMasterContext context)
         {
-            _context = context;
+            _dbContext = context;
             _dbSet = context.Set<T>();
         }
 
@@ -18,69 +18,105 @@ namespace WishServer.Repository
             return _dbSet;
         }
 
-        public async Task InsertAsync(T po, bool ignoreNull = true, bool autoCommit = true)
+        public async Task<int> InsertAsync(T po, bool ignoreNull = true, bool autoCommit = true)
         {
             if (ignoreNull)
             {
-                var entry = _context.Entry(po);
+                var entry = _dbContext.Entry(po);
 
-                var props = entry.Properties.Where(p => p.CurrentValue != null && p.Metadata.GetColumnName() != "id").ToList();
+                string idColumnName = entry.Property("Id").Metadata.GetColumnName();
+
+                var props = entry.Properties.Where(p => p.CurrentValue != null && p.Metadata.GetColumnName() != idColumnName).ToList();
 
                 string columns = string.Join(",", props.Select(p => p.Metadata.GetColumnName()));
 
                 string values = string.Join(",", Enumerable.Range(0, props.Count).Select(t => $"@p{t}").ToList());
 
-                string sql = $"INSERT INTO {entry.Metadata.GetTableName()} ({columns}) VALUES ({values})";
+                string sql = $"INSERT INTO {entry.Metadata.GetTableName()} ({columns}) VALUES ({values});SELECT LAST_INSERT_ID() as {idColumnName};";
 
-                object[]? parameters = props.Select(p => p.CurrentValue ?? DBNull.Value).ToArray();
+                object[] parameters = props.Select(p => p.CurrentValue ?? DBNull.Value).ToArray();
 
-                await _context.Database.ExecuteSqlRawAsync(sql, parameters);
+                var result = await _dbContext.Database.SqlQueryRaw<K>(sql, parameters).ToListAsync();
+                entry.Property("Id").CurrentValue = result.FirstOrDefault();
+                return await Task.FromResult(result.Count).ConfigureAwait(false);
             }
             else
             {
                 await _dbSet.AddAsync(po);
-                if (autoCommit)
-                {
-                    await SaveChangesAsync();
-                }
+                if (autoCommit) return await SaveChangesAsync();
             }
+            return await Task.FromResult(0).ConfigureAwait(false);
         }
 
-        public Task UpdateAsync(T po)
+        public async Task<int> BatchInsertAsync(List<T> pos)
         {
-            throw new NotImplementedException();
+            if (pos == null || pos.Count == 0) return await Task.FromResult(0).ConfigureAwait(false);
+
+            var entityType = _dbContext.Model.FindEntityType(typeof(T));
+
+            var tableName = entityType!.GetTableName();
+
+            var properties = entityType!.GetProperties().Where(t => t.PropertyInfo?.Name != "Id");
+
+            int i = 0;
+
+            var vars = new List<string>();
+            var vals = new List<object?>();
+
+            foreach (var t in pos)
+            {
+                vars.Add($"({string.Join(", ", properties.Select(p => $"@p{i++}"))})");
+                vals.AddRange(properties.Select(p => p.PropertyInfo?.GetValue(t)));
+            }
+
+            var sql = $"INSERT INTO {tableName} ({string.Join(",", properties.Select(p => p.GetColumnName()))}) VALUES {string.Join(",", vars)}";
+
+            return await _dbContext.Database.ExecuteSqlRawAsync(sql, [.. vals]);
         }
 
-        public async Task UpdateByIdAsync(object id, T po)
+        public async Task<int> UpdateAsync(T po, bool ignoreNull = true, bool autoCommit = true)
         {
-            var entry = _context.Entry(po);
+            if (ignoreNull)
+            {
+                var entry = _dbContext.Entry(po);
 
-            var props = entry.Properties.Where(p => p.CurrentValue != null && p.Metadata.GetColumnName() != "id").ToList();
+                object? idValue = entry.Property("Id").CurrentValue;
 
-            string values = string.Join(",", Enumerable.Range(0, props.Count).Select(t => $"set {props[t].Metadata.GetColumnName()} = @p{t + 1}").ToList());
+                if (idValue == null) return await Task.FromResult(0).ConfigureAwait(false);
 
-            string sql = $"update {entry.Metadata.GetTableName()} {values} where id = @p0";
+                string idColumnName = entry.Property("Id").Metadata.GetColumnName();
 
-            object[]? parameters = props.Select(p => p.CurrentValue ?? DBNull.Value).ToArray();
+                var props = entry.Properties.Where(p => p.CurrentValue != null && p.Metadata.GetColumnName() != idColumnName).ToList();
 
-            await _context.Database.ExecuteSqlRawAsync(sql, [id, .. parameters]);
+                string values = string.Join(",", Enumerable.Range(0, props.Count).Select(t => $"set {props[t].Metadata.GetColumnName()}=@p{t + 1}").ToList());
+
+                string sql = $"update {entry.Metadata.GetTableName()} {values} where {idColumnName} = @p0";
+
+                object[] parameters = props.Select(p => p.CurrentValue ?? DBNull.Value).ToArray();
+
+                return await _dbContext.Database.ExecuteSqlRawAsync(sql, [idValue, .. parameters]);
+            }
+            else
+            {
+                _dbSet.Update(po);
+                if (autoCommit) return await SaveChangesAsync();
+            }
+            return await Task.FromResult(0).ConfigureAwait(false);
         }
 
-        public async Task<T?> SelectByIdAsync(object id)
+        public async Task<T?> SelectByIdAsync(K id)
         {
-            return await _context.Set<T>().FindAsync(id);
+            return await _dbContext.Set<T>().FindAsync(id);
         }
 
-        public async Task<int> DeleteByIdAsync(object id)
+        public async Task<int> DeleteByIdAsync(K id)
         {
-            return await _dbSet.Where(t => EF.Property<object>(t, "Id").Equals(id)).ExecuteDeleteAsync();
+            return await _dbSet.Where(t => EF.Property<K>(t, "Id").Equals(id)).ExecuteDeleteAsync();
         }
 
         public async Task<int> SaveChangesAsync()
         {
-            return await _context.SaveChangesAsync();
+            return await _dbContext.SaveChangesAsync();
         }
-
-
     }
 }

@@ -2,20 +2,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace WishServer.Repository;
 
-public interface IRepositoryBase<T> where T : class
+public interface IRepositoryBase<K, T> where T : class
 {
-
     DbSet<T> GetDbSet();
 
-    Task InsertAsync(T po, bool ignoreNull = true, bool autoCommit = true);
+    Task<int> InsertAsync(T po, bool ignoreNull = true, bool autoCommit = true);
 
-    Task UpdateAsync(T po);
+    Task<int> BatchInsertAsync(List<T> pos);
 
-    Task UpdateByIdAsync(object id, T po);
+    Task<int> UpdateAsync(T po, bool ignoreNull = true, bool autoCommit = true);
 
-    Task<T?> SelectByIdAsync(object id);
+    Task<T?> SelectByIdAsync(K id);
 
-    Task<int> DeleteByIdAsync(object id);
+    Task<int> DeleteByIdAsync(K id);
 
     Task<int> SaveChangesAsync();
 }

@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using WishServer.Domain;
-using WishServer.Model;
-using WishServer.Repository;
+using WishServer.Service;
 using WishServer.Service.impl;
 
 namespace WishServer.Controllers
@@ -11,17 +9,19 @@ namespace WishServer.Controllers
     {
         private readonly ILogger<DYPlatformController> _logger;
         private readonly ABPlatformService _abPlatformService;
-        private readonly IWishUserRepository _wishUserRepository;
+        private readonly IWishUserService _wishUserService;
+        
 
         public ABPlatformController(
             ILogger<DYPlatformController> logger,
             ABPlatformService abPlatformService,
-            IWishUserRepository wishUserRepository
+            IWishUserService wishUserService
+
         )
         {
             _logger = logger;
             _abPlatformService = abPlatformService;
-            _wishUserRepository = wishUserRepository;
+            _wishUserService = wishUserService;
         }
 
         [HttpPost("receive")]
@@ -33,14 +33,9 @@ namespace WishServer.Controllers
         }
 
         [HttpGet("dbTest")]
-        public async Task DBTest([FromQuery(Name = "id")] long id)
+        public async Task DBTest([FromQuery(Name = "id")] long id, [FromQuery(Name ="error")]bool error)
         {
-            WishUserPO u1 = new()
-            {
-                Platform = PlatformEnum.KS.ToString(),
-            };
-            
-            await _wishUserRepository.InsertAsync(u1);
+             await _wishUserService.TestTransaction(id, error);
         }
     }
 }
