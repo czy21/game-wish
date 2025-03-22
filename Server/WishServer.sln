@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35707.178 d17.12
+VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WishServer", "WishServer.csproj", "{4AB6740D-1482-421D-9FCA-3DB0705E22E6}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sunny.Framework.DB", "..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.DB\Sunny.Framework.DB.csproj", "{AB96B2E5-9380-4D64-841B-7F73F520F7AF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sunny.Framework.Web", "..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Web\Sunny.Framework.Web.csproj", "{45A2E491-E12B-404E-8EA2-E109F88B2550}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sunny.Framework.NLog", "..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.NLog\Sunny.Framework.NLog.csproj", "{9523409F-FC22-47CB-BF85-33A8708CC6B9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{45A2E491-E12B-404E-8EA2-E109F88B2550}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45A2E491-E12B-404E-8EA2-E109F88B2550}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{45A2E491-E12B-404E-8EA2-E109F88B2550}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9523409F-FC22-47CB-BF85-33A8708CC6B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9523409F-FC22-47CB-BF85-33A8708CC6B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9523409F-FC22-47CB-BF85-33A8708CC6B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9523409F-FC22-47CB-BF85-33A8708CC6B9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

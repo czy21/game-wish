@@ -1,6 +1,7 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using NLog;
 using NLog.Web;
 using Refit;
 using StackExchange.Redis;
@@ -8,6 +9,10 @@ using WishServer;
 using WishServer.Client;
 using WishServer.Repository;
 
+LogManager.Setup().SetupExtensions(o =>
+{
+    //o.RegisterLayoutRenderer<ColoredLevelLayoutRenderer>("level");
+});
 
 var builder = WebApplication.CreateBuilder(args);
 
