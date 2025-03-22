@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using WishServer.Repository;
+using Sunny.Framework.DB.Repository;
 using WishServer.Service;
 
 namespace WishServer
@@ -8,7 +9,6 @@ namespace WishServer
     {
         protected override void Load(ContainerBuilder builder)
         {
-
             builder.RegisterAssemblyTypes(ThisAssembly)
                 .AsClosedTypesOf(typeof(IRepositoryBase<,>))
                 .AsSelf()

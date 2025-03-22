@@ -1,0 +1,3 @@
+[submodule "sunny-cloud"]
+	path = sunny-cloud
+	url = https://gitea.czy21.com:8443/czyhome/sunny-cloud.git

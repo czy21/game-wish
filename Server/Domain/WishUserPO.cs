@@ -1,3 +1,4 @@
+using Sunny.Framework.Core.Model;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WishServer.Domain;
