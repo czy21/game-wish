@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
-using WishServer.Annotation;
 using WishServer.Client;
 using WishServer.Client.DY;
+using WishServer.Domain;
 using WishServer.Model;
 using WishServer.Model.DY;
 using WishServer.Repository;
@@ -22,7 +23,9 @@ namespace WishServer.Service.impl
         private readonly IDatabase _redisDatabase;
         private readonly DYOAuthClient _dyOAuthClient;
         private readonly DYWebCastClient _dYWebCastClient;
+        private readonly IConfigService _configService;
         private readonly IWishUserRepository _wishUserRepository;
+        private readonly IWishItemRepository _wishItemRepository;
 
         public DYPlatformService(
             ILogger<DYPlatformService> logger,
@@ -30,7 +33,9 @@ namespace WishServer.Service.impl
             IDatabase redisDatabase,
             DYOAuthClient dYOAuthClient,
             DYWebCastClient dYWebCastClient,
-            IWishUserRepository wishUserRepository
+            IConfigService configService,
+            IWishUserRepository wishUserRepository,
+            IWishItemRepository wishItemRepository
             )
         {
             _logger = logger;
@@ -38,7 +43,9 @@ namespace WishServer.Service.impl
             _redisDatabase = redisDatabase;
             _dyOAuthClient = dYOAuthClient;
             _dYWebCastClient = dYWebCastClient;
+            _configService = configService;
             _wishUserRepository = wishUserRepository;
+            _wishItemRepository = wishItemRepository;
         }
 
         public PlatformEnum GetPlatform()
@@ -212,7 +219,7 @@ namespace WishServer.Service.impl
                         {
                             await _redisDatabase.ListRightPushAsync(GetRoomUserContentKey(roomId, t.sec_openid), t.content);
                             await _redisDatabase.KeyExpireAsync(GetRoomUserContentKey(roomId, t.sec_openid), TimeSpan.FromDays(1));
-                            await CaculateMoneyAndSaveContent(roomId, roomSession, t.sec_openid);
+                            await CaculateMoneyAndSaveContent(roomId, roomSession, t);
                         }
                     }
                     if (msgType == "live_gift")
@@ -222,7 +229,7 @@ namespace WishServer.Service.impl
                         {
                             await _redisDatabase.StringIncrementAsync(GetRoomUserMoneyKey(roomId, t.sec_openid), t.gift_value);
                             await _redisDatabase.KeyExpireAsync(GetRoomUserMoneyKey(roomId, t.sec_openid), TimeSpan.FromDays(1));
-                            await CaculateMoneyAndSaveContent(roomId, roomSession, t.sec_openid);
+                            await CaculateMoneyAndSaveContent(roomId, roomSession, t);
                         }
                     }
                     //await roomSession.Session.WebSocket.SendJsonAsnyc(
@@ -235,22 +242,69 @@ namespace WishServer.Service.impl
             }
         }
 
-        private async Task CaculateMoneyAndSaveContent(string roomId, RoomSession roomSession, string userId)
+        private async Task CaculateMoneyAndSaveContent(string roomId, RoomSession roomSession, DYMessageBase userInfo)
         {
-            //DYWebCastInfo? roomInfo = await GetRoomInfo(roomId);
-            //if (roomInfo == null) { return; }
-            string anchorId = "1";
-            long money = await _redisDatabase.StringIncrementAsync(GetRoomUserMoneyKey(roomId, userId), -5000);
-            if (money < 0)
+            DYWebCastInfo? roomInfo = await GetRoomInfo(roomId);
+            if (roomInfo == null) return;
+            string? anchorId = roomInfo.anchor_open_id;
+            if (anchorId == null) return;
+            //string anchorId = "1";
+            if ((await _redisDatabase.ListLengthAsync(GetRoomUserContentKey(roomId, userInfo.sec_openid))) == 0)
             {
                 return;
             }
+
+            int cost = await _configService.GetValue<int>("WishServer", "CONTENT_COST");
+
+            var script = @"
+            local val = redis.call('GET', KEYS[1])
+            if not val then
+                val = 0
+            else
+                val = tonumber(val)
+            end
+
+            local tmp = val - tonumber(ARGV[1])
+            if tmp >= 0 then
+               redis.call('SET', KEYS[1], tmp)
+               return 1
+            end
+            return 0
+        ";
+            // 已扣除
+            var paied = await _redisDatabase.ScriptEvaluateAsync(script, [GetRoomUserMoneyKey(roomId, userInfo.sec_openid)], [cost]);
+            if ((int)paied == 0)
+            {
+                return;
+            }
+            string? content = await _redisDatabase.ListLeftPopAsync(GetRoomUserContentKey(roomId, userInfo.sec_openid));
+            WishUserPO? wishUserPO = await _wishUserRepository.GetDbSet()
+                .Where(t =>
+                    t.RoomId == roomId &&
+                    t.AnchorUid == anchorId &&
+                    t.AudienceUid == userInfo.sec_openid
+                ).FirstOrDefaultAsync();
+            if (wishUserPO == null)
+            {
+                wishUserPO = new()
+                {
+                    RoomId = roomId,
+                    AnchorUid = anchorId,
+                    AudienceUid = userInfo.sec_openid
+                };
+                await _wishUserRepository.InsertAsync(wishUserPO);
+            }
+            await _wishItemRepository.InsertAsync(new()
+            {
+                UserId = wishUserPO.Id,
+                Content = content,
+            });
         }
 
-        [OnMessage(MessageKind.ROOM_REPORT)]
-        public async Task HandleRoomReport(Session session, MessageDTO messageDTO)
-        {
+        //[OnMessage(MessageKind.ROOM_REPORT)]
+        //public async Task HandleRoomReport(Session session, MessageDTO messageDTO)
+        //{
 
-        }
+        //}
     }
 }

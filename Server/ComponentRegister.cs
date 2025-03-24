@@ -1,11 +1,10 @@
 ﻿using Autofac;
-using WishServer.Repository;
 using Sunny.Framework.DB.Repository;
 using WishServer.Service;
 
 namespace WishServer
 {
-    public class ServiceRegister : Module
+    public class ComponentRegister : Module
     {
         protected override void Load(ContainerBuilder builder)
         {

@@ -3,15 +3,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WishServer.Domain;
 
-[Table(name: "wish_user")]
-public class WishUserPO : BaseEntity<long, string>
+[Table(name: "wish_item")]
+public class WishItemPO : BaseEntity<long, string>
 {
-    [Column(name: "platform")] public string? Platform { get; set; }
+    [Column(name: "user_id")] public long? UserId { get; set; }
 
-    [Column(name: "room_id")] public string? RoomId { get; set; }
+    [Column(name: "content")] public string? Content { get; set; }
 
-    [Column(name: "anchor_uid")] public string? AnchorUid { get; set; }
-
-    [Column(name: "audience_uid")] public string? AudienceUid { get; set; }
+    [Column(name: "limitDate")] public DateTime? LimitDate { get; set; }
 
 }

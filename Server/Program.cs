@@ -24,7 +24,7 @@ builder.Services.Configure<ConfigProperties>(builder.Configuration.Bind);
 builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
 builder.Host.ConfigureContainer<ContainerBuilder>(b =>
 {
-    b.RegisterModule<ServiceRegister>();
+    b.RegisterModule<ComponentRegister>();
 });
 
 builder.Services.AddDbContext<DbMasterContext>(opt => opt.UseMySQL(builder.Configuration.Get<ConfigProperties>()?.Data.MySQL.Url ?? string.Empty));

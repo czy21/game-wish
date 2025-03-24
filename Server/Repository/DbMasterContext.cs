@@ -10,5 +10,9 @@ public class DbMasterContext : DbContext
         
     }
 
+    public DbSet<ConfigPO> Config { get; set; }
+
     public DbSet<WishUserPO> WishUser { get; set; }
+
+    public DbSet<WishItemPO> WishItem { get; set; }
 }

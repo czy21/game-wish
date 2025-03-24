@@ -3,10 +3,6 @@ using WishServer.Domain;
 
 namespace WishServer.Repository.impl;
 
-public class WishUserRepository : RepositoryBase<long, WishUserPO>, IWishUserRepository
+public class WishUserRepository(DbMasterContext dbContext) : RepositoryBase<long, WishUserPO>(dbContext), IWishUserRepository
 {
-    public WishUserRepository(DbMasterContext dbContext) : base(dbContext)
-    {
-
-    }
 }
