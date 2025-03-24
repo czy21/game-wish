@@ -187,7 +187,7 @@ namespace WishServer.Service.impl
 
         private string GetRoomUserPrefix(string roomId, string userId)
         {
-            return GetRoomKey(roomId) + "-" + userId + "-";
+            return "{" + GetRoomKey(roomId) + "-" + userId + "}-";
         }
 
         private string GetRoomUserContentKey(string roomId, string userId)
@@ -244,20 +244,17 @@ namespace WishServer.Service.impl
 
         private async Task CaculateMoneyAndSaveContent(string roomId, RoomSession roomSession, DYMessageBase userInfo)
         {
-            DYWebCastInfo? roomInfo = await GetRoomInfo(roomId);
-            if (roomInfo == null) return;
-            string? anchorId = roomInfo.anchor_open_id;
-            if (anchorId == null) return;
-            //string anchorId = "1";
-            if ((await _redisDatabase.ListLengthAsync(GetRoomUserContentKey(roomId, userInfo.sec_openid))) == 0)
-            {
-                return;
-            }
+            //DYWebCastInfo? roomInfo = await GetRoomInfo(roomId);
+            //if (roomInfo == null) return;
+            //string? anchorId = roomInfo.anchor_open_id;
+            //if (anchorId == null) return;
+            string anchorId = "1";
 
             int cost = await _configService.GetValue<int>("WishServer", "CONTENT_COST");
 
             var script = @"
-            local val = redis.call('GET', KEYS[1])
+            local val = redis.call('GET', KEYS[2])
+            local len = redis.call('LLEN',KEYS[1])
             if not val then
                 val = 0
             else
@@ -265,19 +262,18 @@ namespace WishServer.Service.impl
             end
 
             local tmp = val - tonumber(ARGV[1])
-            if tmp >= 0 then
-               redis.call('SET', KEYS[1], tmp)
-               return 1
+
+            if tmp >= 0 and len > 0 then
+               redis.call('SET', KEYS[2], tmp)
+               return redis.call('LPOP',KEYS[1])
             end
-            return 0
+            return nil
         ";
-            // 已扣除
-            var paied = await _redisDatabase.ScriptEvaluateAsync(script, [GetRoomUserMoneyKey(roomId, userInfo.sec_openid)], [cost]);
-            if ((int)paied == 0)
+            var content = await _redisDatabase.ScriptEvaluateAsync(script, [GetRoomUserContentKey(roomId, userInfo.sec_openid), GetRoomUserMoneyKey(roomId, userInfo.sec_openid)], [cost]);
+            if (content == null)
             {
                 return;
             }
-            string? content = await _redisDatabase.ListLeftPopAsync(GetRoomUserContentKey(roomId, userInfo.sec_openid));
             WishUserPO? wishUserPO = await _wishUserRepository.GetDbSet()
                 .Where(t =>
                     t.RoomId == roomId &&
@@ -297,7 +293,7 @@ namespace WishServer.Service.impl
             await _wishItemRepository.InsertAsync(new()
             {
                 UserId = wishUserPO.Id,
-                Content = content,
+                Content = (string?)content,
             });
         }
 
