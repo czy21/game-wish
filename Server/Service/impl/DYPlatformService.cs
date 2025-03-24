@@ -244,11 +244,11 @@ namespace WishServer.Service.impl
 
         private async Task CaculateMoneyAndSaveContent(string roomId, RoomSession roomSession, DYMessageBase userInfo)
         {
-            //DYWebCastInfo? roomInfo = await GetRoomInfo(roomId);
-            //if (roomInfo == null) return;
-            //string? anchorId = roomInfo.anchor_open_id;
-            //if (anchorId == null) return;
-            string anchorId = "1";
+            DYWebCastInfo? roomInfo = await GetRoomInfo(roomId);
+            if (roomInfo == null) return;
+            string? anchorId = roomInfo.anchor_open_id;
+            if (anchorId == null) return;
+            //string anchorId = "1";
 
             int cost = await _configService.GetValue<int>("WishServer", "CONTENT_COST");
 
