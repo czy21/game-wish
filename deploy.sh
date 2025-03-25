@@ -21,10 +21,10 @@ done;
 
 if [ -n "${target_host}" ];then
 
-  ssh $target_host "mkdir -p /home/app/${target_name}/"
-  scp ${api_archive_file} $target_host:/home/app/${target_name}/
-  ssh $target_host "cd /home/app/${target_name}/;tar -zxvf ${api_archive_file};chmod +x api;rm -fv ${api_archive_file}"
+  ssh $target_host "mkdir -p /app/${target_name}/"
+  scp ${api_archive_file} $target_host:/app/${target_name}/
+  ssh $target_host "cd /app/${target_name}/;tar -zxvf ${api_archive_file};chmod +x api;rm -fv ${api_archive_file}"
 
-  ssh $target_host "bash script/start-api.sh -n ${target_name} -c dotnet -d /home/app/${target_name}"
+  ssh $target_host "bash script/start-api.sh -n ${target_name} -c dotnet -d /app/${target_name}"
   
 fi
