@@ -1,14 +1,10 @@
 #!/bin/bash
+
+set -x
+
 cd $(cd "$(dirname "$0")"; pwd)
 
 source build.sh
-
-api_archive_file=api.tar.gz
-
-if [ ! -f "${api_archive_file}" ];then
-  echo "${api_archive_file} not exists"
-  exit 0
-fi
 
 target_host=
 target_name="game-wish"
