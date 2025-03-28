@@ -36,10 +36,10 @@ namespace WishServer.Service.impl
             {
                 //await _wishUserRepository.InsertAsync(u1);
 
-                //if (error)
-                //{
-                //    throw new Exception("aa");
-                //}
+                if (error)
+                {
+                    throw new Exception("aa");
+                }
 
                 //var updateCount = await _wishUserRepository.UpdateAsync(u1, false);
                 //Console.WriteLine($"UpdateCount: {updateCount}");
