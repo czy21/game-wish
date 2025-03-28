@@ -15,12 +15,10 @@ while getopts "h:n:" opt;do
     esac
 done;
 
-if [ -n "${target_host}" ];then
-  (
-    cd Server/build
-    tar -zcf - $(find . -type f \( ! -name "appsettings*.json" -o -name "appsettings.json" \)) \
-     | ssh $target_host "mkdir -p /app/${target_name}/ && tar -zxf - -C /app/${target_name}/ && ls -al /app/${target_name}/ && chmod +x /app/${target_name}/api"
-  )
+export param_project_root="$(pwd)/Server"
+export param_release_name="${target_name}"
+export param_code_type="dotnet"
 
-  ssh $target_host "chmod +x host-start-api.sh && ./host-start-api.sh -n ${target_name} -c dotnet -d /app/${target_name}"
-fi
+export SSH_HOST=${target_host}
+
+curl -sSL https://raw.githubusercontent.com/czy21/script/refs/heads/master/jenkins/resources/org/ops/host-deploy.sh | bash
