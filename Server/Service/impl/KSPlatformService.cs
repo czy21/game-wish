@@ -1,11 +1,14 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Google.Protobuf.WellKnownTypes;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using WishServer.Client;
+using WishServer.Client.DY;
 using WishServer.Client.KS;
 using WishServer.Model;
+using WishServer.Model.DY;
 using WishServer.Model.KS;
 
 namespace WishServer.Service.impl
@@ -17,19 +20,19 @@ namespace WishServer.Service.impl
         private readonly ILogger<DYPlatformService> _logger;
         private readonly ConfigProperties _config;
         private readonly IDatabase _redisDatabase;
-        private readonly KSOAuthClient _ksOAuthClient;
+        private readonly KSClient _ksClient;
 
         public KSPlatformService(
             ILogger<DYPlatformService> logger,
             IOptions<ConfigProperties> options,
             IDatabase redisDatabase,
-            KSOAuthClient ksOAuthClient
+            KSClient ksClient
             )
         {
             _logger = logger;
             _config = options.Value;
             _redisDatabase = redisDatabase;
-            _ksOAuthClient = ksOAuthClient;
+            _ksClient = ksClient;
         }
 
         public PlatformEnum GetPlatform()
@@ -42,7 +45,7 @@ namespace WishServer.Service.impl
             return "KS-" + _config.Platform.AppToken + "-token";
         }
 
-        public async Task<string?> GetAccessToken()
+        public async Task<string> GetAccessToken()
         {
             KSAccessTokenReq req = new()
             {
@@ -52,9 +55,9 @@ namespace WishServer.Service.impl
             };
 
             string? accessToken = await _redisDatabase.StringGetAsync(GetAccessTokenKey());
-            if (accessToken == null)
+            if (string.IsNullOrEmpty(accessToken))
             {
-                KSAccessTokenRes res = await _ksOAuthClient.GetAccessToken(req);
+                KSAccessTokenRes res = await _ksClient.GetAccessToken(req);
                 if (res.result == 1)
                 {
                     accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.access_token, TimeSpan.FromSeconds(res.expires_in - 30));
@@ -65,7 +68,7 @@ namespace WishServer.Service.impl
 
         private string CalculateSignature(Dictionary<string, object> param)
         {
-            
+
             var trimmedParam = param.Where(item => !string.IsNullOrEmpty(item.Value.ToString())).ToDictionary(item => item.Key, item => item.Value);
 
             var sortedParam = trimmedParam.OrderBy(item => item.Key).ToDictionary(item => item.Key, item => item.Value);
@@ -78,8 +81,29 @@ namespace WishServer.Service.impl
             return Convert.ToHexStringLower(hashBytes);
         }
 
-        public Task Init(Session session)
+        public async Task Init(Session session)
         {
+            if (session.RoomId == null)
+            {
+                return;
+            }
+
+            ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new KSRoomSession() { Session = session }, (k, v) => v);
+            await DoRoomTask(session.RoomId);
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("KS Bind Check Task is running.");
+            _ = new Timer(
+                async (object? state) =>
+                {
+                    foreach (var k in ROOM_SESSION_DICT.Keys)
+                    {
+                        await DoRoomTask(k);
+                    }
+                },
+                null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
             return Task.CompletedTask;
         }
 
@@ -88,9 +112,44 @@ namespace WishServer.Service.impl
             return Task.CompletedTask;
         }
 
-        public Task Exit(Session session)
+        private async Task DoRoomTask(string roomId)
         {
-            return Task.CompletedTask;
+            if (ROOM_SESSION_DICT[roomId].Bind.TaskStatus != "SUCCESS")
+            {
+                string accessToken = await GetAccessToken();
+                var param = new Dictionary<string, object>()
+                {
+                    {"roomCode",roomId},
+                    {"timestamp",DateTimeOffset.Now.ToUnixTimeSeconds()},
+                    {"moduleType","bind" },
+                    {"actionType","start" },
+                };
+                param["sign"] = CalculateSignature(param);
+                KSBindRes res = await _ksClient.Bind(_config.Platform.DY.OAuth.AppId, accessToken, param);
+                if (res.result == 1)
+                {
+                    ROOM_SESSION_DICT[roomId].Bind.TaskStatus = "SUCCESS";
+                }
+            }
+        }
+
+        public async Task Exit(Session session)
+        {
+            var removeRooms = ROOM_SESSION_DICT.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
+            foreach (var r in removeRooms)
+            {
+                string accessToken = await GetAccessToken();
+                var param = new Dictionary<string, object>()
+                {
+                    {"roomCode",r.Key},
+                    {"timestamp",DateTimeOffset.Now.ToUnixTimeSeconds()},
+                    {"moduleType","bind" },
+                    {"actionType","stop" },
+                };
+                param["sign"] = CalculateSignature(param);
+                KSBindRes res = await _ksClient.Bind(_config.Platform.DY.OAuth.AppId, accessToken, param);
+                ROOM_SESSION_DICT.TryRemove(r.Key, out _);
+            }
         }
     }
 }

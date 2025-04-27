@@ -44,7 +44,7 @@ builder.Services.AddRefitClient<DYOAuthClient>().ConfigureHttpClient(c => c.Base
 
 builder.Services.AddRefitClient<DYWebCastClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://webcast.bytedance.com/api"));
 
-builder.Services.AddRefitClient<KSOAuthClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://open.kuaishou.com"));
+builder.Services.AddRefitClient<KSClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://open.kuaishou.com"));
 
 var app = builder.Build();
 
