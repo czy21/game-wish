@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using WishServer.Client;
 using WishServer.Client.KS;
 using WishServer.Model;
@@ -59,6 +61,21 @@ namespace WishServer.Service.impl
                 }
             }
             return accessToken;
+        }
+
+        private string CalculateSignature(Dictionary<string, object> param)
+        {
+            
+            var trimmedParam = param.Where(item => !string.IsNullOrEmpty(item.Value.ToString())).ToDictionary(item => item.Key, item => item.Value);
+
+            var sortedParam = trimmedParam.OrderBy(item => item.Key).ToDictionary(item => item.Key, item => item.Value);
+
+            string paramStr = string.Join("&", sortedParam.Select(item => $"{item.Key}={item.Value}"));
+            string signStr = paramStr + this._config.Platform.KS.OAuth.AppSecret;
+
+            byte[] inputBytes = Encoding.UTF8.GetBytes(signStr);
+            byte[] hashBytes = MD5.HashData(inputBytes);
+            return Convert.ToHexStringLower(hashBytes);
         }
 
         public Task Init(Session session)

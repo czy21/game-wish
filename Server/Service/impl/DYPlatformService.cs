@@ -130,7 +130,7 @@ namespace WishServer.Service.impl
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("DY Push Check Task is running.");
-            new Timer(
+            _ = new Timer(
                 async (object? state) =>
                 {
                     foreach (var k in ROOM_SESSION_DICT.Keys)

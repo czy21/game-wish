@@ -7,7 +7,7 @@ namespace WishServer.Client
     public interface KSOAuthClient
     {
         [Headers("content-type: application/json")]
-        [Post("/oauth2/access_token")]
-        Task<KSAccessTokenRes> GetAccessToken([Body] KSAccessTokenReq param);
+        [Get("/oauth2/access_token")]
+        Task<KSAccessTokenRes> GetAccessToken([Query] KSAccessTokenReq param);
     }
 }
