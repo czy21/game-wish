@@ -27,9 +27,9 @@ builder.Host.ConfigureContainer<ContainerBuilder>(b =>
     b.RegisterModule<ComponentRegister>();
 });
 
-builder.Services.AddDbContext<DbMasterContext>(opt => opt.UseMySQL(builder.Configuration.Get<ConfigProperties>()?.Data.MySQL.Url ?? string.Empty));
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseMySQL(builder.Configuration.Get<ConfigProperties>()?.Data.MySQL.Url ?? string.Empty));
 
-builder.Services.ConfigureDbContext<DbMasterContext>(opt => opt.EnableSensitiveDataLogging());
+builder.Services.ConfigureDbContext<AppDbContext>(opt => opt.EnableSensitiveDataLogging());
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -40,11 +40,11 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(c => ConnectionMultiplexer
 
 builder.Services.AddSingleton(c => c.GetService<IConnectionMultiplexer>().GetDatabase());
 
-builder.Services.AddRefitClient<DYOAuthClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://developer.toutiao.com/api"));
+builder.Services.AddRefitClient<IDYOAuthClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://developer.toutiao.com/api"));
 
-builder.Services.AddRefitClient<DYClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://webcast.bytedance.com/api"));
+builder.Services.AddRefitClient<IDYClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://webcast.bytedance.com/api"));
 
-builder.Services.AddRefitClient<KSClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://open.kuaishou.com"));
+builder.Services.AddRefitClient<IKSClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://open.kuaishou.com"));
 
 var app = builder.Build();
 

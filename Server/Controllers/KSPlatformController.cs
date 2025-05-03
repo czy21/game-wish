@@ -16,6 +16,5 @@ namespace WishServer.Controllers
             _ksPlatformService = ksPlatformService;
         }
 
-
     }
 }

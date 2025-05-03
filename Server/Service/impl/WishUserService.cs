@@ -8,11 +8,11 @@ namespace WishServer.Service.impl
     public class WishUserService : ServiceBase, IWishUserService
     {
         private readonly IWishUserRepository _wishUserRepository;
-        private readonly DbMasterContext _dbMasterContext;
+        private readonly AppDbContext _dbMasterContext;
 
         public WishUserService(
             IWishUserRepository wishUserRepository,
-            DbMasterContext dbMasterContext)
+            AppDbContext dbMasterContext)
         {
 
             _wishUserRepository = wishUserRepository;

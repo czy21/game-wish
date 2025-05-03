@@ -50,7 +50,7 @@ namespace WishServer.Service.impl
 
         public string GetAccessTokenKey()
         {
-            return "AB-" + _config.Platform.AppToken + "-token";
+            return "AB-" + _config.Platform.AppId + "-token";
         }
 
         public Task<string?> GetAccessToken()

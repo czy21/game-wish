@@ -27,7 +27,7 @@
 
     public class Platform
     {
-        public string AppToken { get; set; }
+        public string AppId { get; set; }
         public PlatformDY DY { get; set; } = new PlatformDY();
         public PlatformKS KS { get; set; } = new PlatformKS();
     }

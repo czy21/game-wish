@@ -21,8 +21,8 @@ namespace WishServer.Service.impl
         private readonly ILogger<DYPlatformService> _logger;
         private readonly ConfigProperties _config;
         private readonly IDatabase _redisDatabase;
-        private readonly DYOAuthClient _dyOAuthClient;
-        private readonly DYClient _dYWebCastClient;
+        private readonly IDYOAuthClient _dyOAuthClient;
+        private readonly IDYClient _dYClient;
         private readonly IConfigService _configService;
         private readonly IWishUserRepository _wishUserRepository;
         private readonly IWishItemRepository _wishItemRepository;
@@ -31,8 +31,8 @@ namespace WishServer.Service.impl
             ILogger<DYPlatformService> logger,
             IOptions<ConfigProperties> options,
             IDatabase redisDatabase,
-            DYOAuthClient dYOAuthClient,
-            DYClient dYWebCastClient,
+            IDYOAuthClient dYOAuthClient,
+            IDYClient dyClient,
             IConfigService configService,
             IWishUserRepository wishUserRepository,
             IWishItemRepository wishItemRepository
@@ -42,7 +42,7 @@ namespace WishServer.Service.impl
             _config = options.Value;
             _redisDatabase = redisDatabase;
             _dyOAuthClient = dYOAuthClient;
-            _dYWebCastClient = dYWebCastClient;
+            _dYClient = dyClient;
             _configService = configService;
             _wishUserRepository = wishUserRepository;
             _wishItemRepository = wishItemRepository;
@@ -55,10 +55,10 @@ namespace WishServer.Service.impl
 
         public string GetAccessTokenKey()
         {
-            return "DY-" + _config.Platform.AppToken + "-token";
+            return $"{_config.Platform.AppId}:DY:access_token";
         }
 
-        public async Task<string?> GetAccessToken()
+        public async Task<string> GetAccessToken()
         {
             DYAccessTokenReq req = new()
             {
@@ -68,12 +68,12 @@ namespace WishServer.Service.impl
             };
 
             string? accessToken = await _redisDatabase.StringGetAsync(GetAccessTokenKey());
-            if (accessToken == null)
+            if (string.IsNullOrEmpty(accessToken))
             {
                 DYAccessTokenRes res = await _dyOAuthClient.GetAccessToken(req);
                 if (res.data != null)
                 {
-                    accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.data.access_token, TimeSpan.FromSeconds(res.data.expires_in - 30));
+                    accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.data.access_token, TimeSpan.FromHours(1));
                 }
             }
             return accessToken;
@@ -81,12 +81,12 @@ namespace WishServer.Service.impl
 
         private string GetRoomPrefix()
         {
-            return "DY-RoomId-";
+            return $"{_config.Platform.AppId}:DY:ROOM";
         }
 
         private string GetRoomKey(string roomId)
         {
-            return GetRoomPrefix() + roomId;
+            return $"{GetRoomPrefix()}:{roomId}";
         }
 
         public async Task<DYWebCastInfoRes> GetLiveInfo(string token)
@@ -95,7 +95,7 @@ namespace WishServer.Service.impl
 
             DYWebCastInfoReq param = new() { token = token };
 
-            DYWebCastInfoRes res = await _dYWebCastClient.GetLiveInfo(param, accessToken);
+            DYWebCastInfoRes res = await _dYClient.GetLiveInfo(param, accessToken);
 
             if (res.data?.info?.room_id != null)
             {
@@ -152,7 +152,7 @@ namespace WishServer.Service.impl
             foreach (var t in ROOM_SESSION_DICT[roomId].Tasks.Where(t => t.TaskStatus != "SUCCESS"))
             {
                 string? accessToken = await GetAccessToken();
-                DYLiveDataTaskRes taskRes = await _dYWebCastClient.StartTaskPush(new()
+                DYLiveDataTaskRes taskRes = await _dYClient.StartTaskPush(new()
                 {
                     appid = _config.Platform.DY.OAuth.AppId,
                     roomid = roomId,
@@ -174,7 +174,7 @@ namespace WishServer.Service.impl
                 string? accessToken = await GetAccessToken();
                 foreach (var t in r.Value.Tasks)
                 {
-                    await _dYWebCastClient.StopTaskPush(new()
+                    await _dYClient.StopTaskPush(new()
                     {
                         appid = _config.Platform.DY.OAuth.AppId,
                         roomid = r.Key,
@@ -187,17 +187,17 @@ namespace WishServer.Service.impl
 
         private string GetRoomUserPrefix(string roomId, string userId)
         {
-            return "{" + GetRoomKey(roomId) + "-" + userId + "}-";
+            return "{" + $"{GetRoomKey(roomId)}:USER:{userId}" + "}";
         }
 
         private string GetRoomUserContentKey(string roomId, string userId)
         {
-            return GetRoomUserPrefix(roomId, userId) + "content";
+            return $"{GetRoomUserPrefix(roomId, userId)}:content";
         }
 
         private string GetRoomUserMoneyKey(string roomId, string userId)
         {
-            return GetRoomUserPrefix(roomId, userId) + "money";
+            return $"{GetRoomUserPrefix(roomId, userId)}:money";
         }
 
         public async Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param)

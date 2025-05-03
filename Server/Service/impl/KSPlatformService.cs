@@ -1,5 +1,4 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.KS;
@@ -18,13 +17,13 @@ namespace WishServer.Service.impl
         private readonly ILogger<DYPlatformService> _logger;
         private readonly ConfigProperties _config;
         private readonly IDatabase _redisDatabase;
-        private readonly KSClient _ksClient;
+        private readonly IKSClient _ksClient;
 
         public KSPlatformService(
             ILogger<DYPlatformService> logger,
             IOptions<ConfigProperties> options,
             IDatabase redisDatabase,
-            KSClient ksClient
+            IKSClient ksClient
             )
         {
             _logger = logger;
@@ -40,7 +39,7 @@ namespace WishServer.Service.impl
 
         public string GetAccessTokenKey()
         {
-            return "KS-" + _config.Platform.AppToken + "-token";
+            return $"{_config.Platform.AppId}:KS:access_token";
         }
 
         public async Task<string> GetAccessToken()
@@ -58,7 +57,7 @@ namespace WishServer.Service.impl
                 KSAccessTokenRes res = await _ksClient.GetAccessToken(req);
                 if (res.result == 1)
                 {
-                    accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.access_token, TimeSpan.FromSeconds(res.expires_in - 30));
+                    accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.access_token, TimeSpan.FromHours(1));
                 }
             }
             return accessToken;
