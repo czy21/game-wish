@@ -1,14 +1,12 @@
 ﻿using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using Sunny.Framework.External.Client;
+using Sunny.Framework.External.Client.KS;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
-using WishServer.Client;
-using WishServer.Client.DY;
-using WishServer.Client.KS;
 using WishServer.Model;
-using WishServer.Model.DY;
 using WishServer.Model.KS;
 
 namespace WishServer.Service.impl

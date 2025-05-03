@@ -5,8 +5,8 @@ using NLog;
 using NLog.Web;
 using Refit;
 using StackExchange.Redis;
+using Sunny.Framework.External.Client;
 using WishServer;
-using WishServer.Client;
 using WishServer.Repository;
 
 LogManager.Setup().SetupExtensions(o =>
@@ -42,7 +42,7 @@ builder.Services.AddSingleton(c => c.GetService<IConnectionMultiplexer>().GetDat
 
 builder.Services.AddRefitClient<DYOAuthClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://developer.toutiao.com/api"));
 
-builder.Services.AddRefitClient<DYWebCastClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://webcast.bytedance.com/api"));
+builder.Services.AddRefitClient<DYClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://webcast.bytedance.com/api"));
 
 builder.Services.AddRefitClient<KSClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://open.kuaishou.com"));
 

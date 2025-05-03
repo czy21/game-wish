@@ -17,6 +17,7 @@
     <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.DB\Sunny.Framework.DB.csproj" />
     <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Cache\Sunny.Framework.Cache.csproj" />
     <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Web\Sunny.Framework.Web.csproj" />
+    <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.External\Sunny.Framework.External.csproj" />
   </ItemGroup>
 
 </Project>

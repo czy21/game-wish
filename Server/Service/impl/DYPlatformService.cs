@@ -1,10 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using Sunny.Framework.External.Client;
+using Sunny.Framework.External.Client.DY;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
-using WishServer.Client;
-using WishServer.Client.DY;
 using WishServer.Domain;
 using WishServer.Model;
 using WishServer.Model.DY;
@@ -22,7 +22,7 @@ namespace WishServer.Service.impl
         private readonly ConfigProperties _config;
         private readonly IDatabase _redisDatabase;
         private readonly DYOAuthClient _dyOAuthClient;
-        private readonly DYWebCastClient _dYWebCastClient;
+        private readonly DYClient _dYWebCastClient;
         private readonly IConfigService _configService;
         private readonly IWishUserRepository _wishUserRepository;
         private readonly IWishItemRepository _wishItemRepository;
@@ -32,7 +32,7 @@ namespace WishServer.Service.impl
             IOptions<ConfigProperties> options,
             IDatabase redisDatabase,
             DYOAuthClient dYOAuthClient,
-            DYWebCastClient dYWebCastClient,
+            DYClient dYWebCastClient,
             IConfigService configService,
             IWishUserRepository wishUserRepository,
             IWishItemRepository wishItemRepository

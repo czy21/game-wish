@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using WishServer.Client.DY;
+using Sunny.Framework.External.Client.DY;
 using WishServer.Service.impl;
 
 namespace WishServer.Controllers
