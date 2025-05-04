@@ -1,4 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Nacos.V2;
 using WishServer.Domain;
 using WishServer.Model.DTO;
 using WishServer.Service;
@@ -12,13 +15,39 @@ namespace WishServer.Controllers
         IGameUserService _gameUserService;
         IGameGiftService _gameGiftService;
         IGameRoomService _gameRoomService;
+        IConfiguration _configuration;
+        INacosConfigService _nacosConfigService;
 
-        public TestController(ILogger<WebSocketController> logger, IGameUserService gameUserService, IGameGiftService gameGiftService, IGameRoomService gameRoomService)
+        ConfigProperties _configProperties;
+
+        private readonly ConfigProperties _settings1;
+        private readonly ConfigProperties _settings2;
+        private readonly ConfigProperties _settings3;
+
+        public TestController(ILogger<WebSocketController> logger,
+            IGameUserService gameUserService,
+            IGameGiftService gameGiftService,
+            IGameRoomService gameRoomService,
+            IConfiguration configuration,
+            INacosConfigService nacosConfigService,
+            IOptions<ConfigProperties> options1,
+            IOptionsSnapshot<ConfigProperties> options2,
+            IOptionsMonitor<ConfigProperties> options3
+            )
         {
             _logger = logger;
             _gameUserService = gameUserService;
             _gameGiftService = gameGiftService;
             _gameRoomService = gameRoomService;
+            _configuration = configuration;
+
+            _configProperties = options1.Value;
+
+            _settings1 = options1.Value;
+            _settings2 = options2.Value;
+            _settings3 = options3.CurrentValue;
+
+            _nacosConfigService = nacosConfigService;
         }
 
         [HttpGet("db1")]
@@ -40,6 +69,18 @@ namespace WishServer.Controllers
         {
             await _gameRoomService.SaveOne();
             return await Task.FromResult(GameRoomPO.Empty());
+        }
+
+        [HttpGet("config")]
+        public async Task<object> config()
+        {
+            return await Task.FromResult(new Dictionary<string, object>
+            {
+                {"o1",_settings1.AppName },
+                {"o2",_settings2.AppName },
+                {"o3",_settings3.AppName },
+                {"setting",_settings2 }
+            });
         }
     }
 }

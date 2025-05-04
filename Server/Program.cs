@@ -1,6 +1,7 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Nacos.V2.DependencyInjection;
 using NLog;
 using NLog.Web;
 using Refit;
@@ -15,6 +16,24 @@ LogManager.Setup().SetupExtensions(o =>
 });
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseNacosConfig("NacosConfig");
+builder.Services.AddNacosV2Config(builder.Configuration,null,"NacosConfig");
+
+// TODO 服务发现 目前不可用
+//builder.Services.AddNacosV2Naming(builder.Configuration,null,"NacosDiscovery");
+
+//builder.Services.AddServiceDiscovery(o =>
+//{
+//    o.RefreshPeriod = TimeSpan.FromSeconds(60);
+//})
+//.AddConfigurationServiceEndpointProvider()
+//.AddNacosServiceEndpointProvider();
+
+//builder.Services.ConfigureHttpClientDefaults(static http =>
+//{
+//    http.AddServiceDiscovery();
+//});
 
 builder.Logging.ClearProviders();
 builder.Host.UseNLog();
