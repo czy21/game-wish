@@ -9,6 +9,13 @@ namespace WishServer.Repository
 {
     public class AppDbContext : DbContext
     {
+        public AppDbContext()
+        {
+        }
+
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        {
+        }
         public DbSet<ConfigPO> Configs { get; set; }
         public DbSet<GamePO> Games { get; set; }
         public DbSet<GameGiftPO> GameGifts { get; set; }
