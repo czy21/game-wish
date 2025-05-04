@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace WishServer.Domain
 {
     [Table("game_gift")]
-    public class GameGiftPO : BaseEntity<long,string>
+    public class GameGiftPO : BaseEntity<long?, string?>
     {
         [Column("game_id")]
         public long? GameId { get; set; }
@@ -29,5 +29,26 @@ namespace WishServer.Domain
         /// 礼物价值;人民币(分)
         [Column("gift_money")]
         public long? GiftMoney { get; set; }
+
+        public static GameGiftPO Empty()
+        {
+            return new ()
+            {
+                Id = default(long),
+                GameId = default(long),
+                Platform = string.Empty,
+                RoomId = string.Empty,
+                RoundId = default(long),
+                UserId = string.Empty,
+                GiftId = string.Empty,
+                GiftCount = default(long),
+                GiftMoney = default(long),
+                CreateTime = default(DateTime),
+                CreateUser = string.Empty,
+                UpdateTime = default(DateTime),
+                UpdateUser = string.Empty,
+                Deleted = default(bool),
+            };
+        }
     }
 }

@@ -5,7 +5,7 @@ using WishServer.Model.DTO;
 
 namespace WishServer.Repository.impl
 {
-    public class GameRoomRepository(AppDbContext dbContext) : RepositoryBase<long, GameRoomPO>(dbContext), IGameRoomRepository
+    public class GameRoomRepository(AppDbContext dbContext) : RepositoryBase<long?, GameRoomPO>(dbContext), IGameRoomRepository
     {
         public async Task<GameRoomDTO?> AggRoom(string roomId)
         {
@@ -22,6 +22,5 @@ namespace WishServer.Repository.impl
                             RoundCount = g.Count(),
                         };
             return await query.FirstOrDefaultAsync();
-        }
-    }
+        }    }
 }

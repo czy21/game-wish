@@ -1,4 +1,6 @@
-﻿using WishServer.Model.DTO;
+﻿using Microsoft.EntityFrameworkCore;
+using WishServer.Domain;
+using WishServer.Model.DTO;
 using WishServer.Repository;
 
 namespace WishServer.Service.impl
@@ -15,6 +17,28 @@ namespace WishServer.Service.impl
         public async Task<GameRoomDTO?> AggRoom(string roomId)
         {
             return await _gameRoomRepository.AggRoom(roomId);
+        }
+
+        public async Task<GameRoomPO?> GetOne(string roomId)
+        {
+            return await _gameRoomRepository.GetDbSet().Where(t => t.RoomId == roomId).FirstOrDefaultAsync();
+        }
+
+        public async Task SaveOne()
+        {
+
+            GameRoomPO p=new GameRoomPO();
+            p.Platfrom = "DY";
+            p.GameId = 1;
+            p.RoomId = "1";
+            p.AnchorId = "1";
+            p.AvatarUrl = "haha";
+            await _gameRoomRepository.UpsertAsync(p, new Dictionary<System.Linq.Expressions.Expression<Func<GameRoomPO, object?>>, string> {
+                {t=>t.AvatarUrl,"values(avatar_url)" }
+            });
+
+            //GameRoomPO p= GameRoomPO.Empty();
+            //await _gameRoomRepository.InsertAsync(p,false);
         }
     }
 }

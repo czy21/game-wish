@@ -3,7 +3,7 @@ using WishServer.Domain;
 
 namespace WishServer.Repository
 {
-    public interface IGameUserRepository : IRepositoryBase<long, GameUserPO>
+    public interface IGameUserRepository : IRepositoryBase<long?, GameUserPO>
     {
 
     }

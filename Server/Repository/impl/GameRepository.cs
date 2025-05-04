@@ -3,7 +3,7 @@ using WishServer.Domain;
 
 namespace WishServer.Repository.impl
 {
-    public class GameRepository(AppDbContext dbContext) : RepositoryBase<long, GamePO>(dbContext), IGameRepository
+    public class GameRepository(AppDbContext dbContext) : RepositoryBase<long?, GamePO>(dbContext), IGameRepository
     {
     }
 }

@@ -31,7 +31,7 @@ namespace WishServer.Service.impl
             {
                 {t=>t.Nickname,"values(nickname)"}
             };
-            var ret=await _gameUserRepository.Upsert(po, updators);
+            var ret=await _gameUserRepository.UpsertAsync(po, updators);
             Console.WriteLine(ret);
         }
     }

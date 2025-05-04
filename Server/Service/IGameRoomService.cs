@@ -1,9 +1,14 @@
-﻿using WishServer.Model.DTO;
+﻿using WishServer.Domain;
+using WishServer.Model.DTO;
 
 namespace WishServer.Service
 {
     public interface IGameRoomService : IServiceBase
     {
         Task<GameRoomDTO?> AggRoom(string roomId);
+
+        Task<GameRoomPO?> GetOne(string roomId);
+
+        Task SaveOne();
     }
 }

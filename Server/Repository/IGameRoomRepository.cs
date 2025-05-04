@@ -4,7 +4,7 @@ using WishServer.Model.DTO;
 
 namespace WishServer.Repository
 {
-    public interface IGameRoomRepository : IRepositoryBase<long, GameRoomPO>
+    public interface IGameRoomRepository : IRepositoryBase<long?, GameRoomPO>
     {
         Task<GameRoomDTO?> AggRoom(string roomId);
     }

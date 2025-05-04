@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace WishServer.Domain
 {
     [Table("game_user")]
-    public class GameUserPO : BaseEntity<long,string>
+    public class GameUserPO : BaseEntity<long?, string?>
     {
         [Column("game_id")]
         public long? GameId { get; set; }
@@ -20,5 +20,23 @@ namespace WishServer.Domain
         /// 昵称
         [Column("nickname")]
         public string? Nickname { get; set; }
+
+        public static GameUserPO Empty()
+        {
+            return new ()
+            {
+                Id = default(long),
+                GameId = default(long),
+                Platform = string.Empty,
+                UserId = string.Empty,
+                AvatarUrl = string.Empty,
+                Nickname = string.Empty,
+                CreateTime = default(DateTime),
+                CreateUser = string.Empty,
+                UpdateTime = default(DateTime),
+                UpdateUser = string.Empty,
+                Deleted = default(bool),
+            };
+        }
     }
 }

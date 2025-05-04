@@ -3,7 +3,7 @@ using WishServer.Domain;
 
 namespace WishServer.Repository
 {
-    public interface IConfigRepository : IRepositoryBase<long, ConfigPO>
+    public interface IConfigRepository : IRepositoryBase<long?, ConfigPO>
     {
 
     }
