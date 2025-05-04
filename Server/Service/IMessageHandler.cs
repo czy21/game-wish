@@ -6,7 +6,7 @@ namespace WishServer.Service
     {
         PlatformEnum GetPlatform();
         string GetAccessTokenKey();
-        Task<string?> GetAccessToken();
+        Task<string> GetAccessToken();
         Task Init(Session session);
         Task Exit(Session session);
         Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param);

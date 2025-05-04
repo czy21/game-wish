@@ -76,7 +76,7 @@ namespace WishServer.Service.impl
                     accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.data.access_token, TimeSpan.FromHours(1));
                 }
             }
-            return accessToken;
+            return accessToken ?? string.Empty;
         }
 
         private string GetRoomPrefix()

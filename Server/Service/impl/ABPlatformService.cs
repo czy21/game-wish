@@ -53,7 +53,7 @@ namespace WishServer.Service.impl
             return "AB-" + _config.Platform.AppId + "-token";
         }
 
-        public Task<string?> GetAccessToken()
+        public Task<string> GetAccessToken()
         {
             return Task.FromResult("");
         }

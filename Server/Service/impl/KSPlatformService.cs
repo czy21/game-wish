@@ -60,7 +60,7 @@ namespace WishServer.Service.impl
                     accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.access_token, TimeSpan.FromHours(1));
                 }
             }
-            return accessToken;
+            return accessToken??string.Empty;
         }
 
         private string CalculateSignature(Dictionary<string, object> param)
