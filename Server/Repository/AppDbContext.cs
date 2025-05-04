@@ -1,21 +1,21 @@
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using WishServer.Domain;
 
-namespace WishServer.Repository;
 
-public class AppDbContext : DbContext
+namespace WishServer.Repository
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    public class AppDbContext : DbContext
     {
-        
+        public DbSet<ConfigPO> Configs { get; set; }
+        public DbSet<GamePO> Games { get; set; }
+        public DbSet<GameGiftPO> GameGifts { get; set; }
+        public DbSet<GameRoomPO> GameRooms { get; set; }
+        public DbSet<GameRoundPO> GameRounds { get; set; }
+        public DbSet<GameUserPO> GameUsers { get; set; }
+        public DbSet<WishItemPO> WishItems { get; set; }
+        public DbSet<WishUserPO> WishUsers { get; set; }
     }
-
-    public DbSet<ConfigPO> Config { get; set; }
-
-    public DbSet<WishUserPO> WishUser { get; set; }
-
-    public DbSet<WishItemPO> WishItem { get; set; }
-
-    public DbSet<GameUserPO> GameUser { get; set; }
-    public DbSet<GameGiftPO> GameGift { get; set; }
 }

@@ -3,15 +3,16 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WishServer.Domain
 {
-    [Table(name: "config")]
-    public class ConfigPO : BaseEntity<long, string>
+    [Table("config")]
+    public class ConfigPO : BaseEntity<long,string>
     {
-        [Column(name: "key")] public string? Key { get; set; }
-
-        [Column(name: "value")] public string? Value { get; set; }
-
-        [Column(name: "category")] public string? Category { get; set; }
-
-        [Column(name: "remark")] public string? Remark { get; set; }
+        [Column("key")]
+        public string? Key { get; set; }
+        [Column("value")]
+        public string? Value { get; set; }
+        [Column("remark")]
+        public string? Remark { get; set; }
+        [Column("category")]
+        public string? Category { get; set; }
     }
 }

@@ -1,15 +1,23 @@
-using Sunny.Framework.Core.Model;
+﻿using Sunny.Framework.Core.Model;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace WishServer.Domain;
-
-[Table(name: "wish_item")]
-public class WishItemPO : BaseEntity<long, string>
+namespace WishServer.Domain
 {
-    [Column(name: "user_id")] public long? UserId { get; set; }
-
-    [Column(name: "content")] public string? Content { get; set; }
-
-    [Column(name: "limitDate")] public DateTime? LimitDate { get; set; }
-
+    /// 心愿-用户
+    [Table("wish_user")]
+    public class WishUserPO : BaseEntity<long,string>
+    {
+        /// 平台;DY;KS
+        [Column("platform")]
+        public string? Platform { get; set; }
+        /// 房间id
+        [Column("room_id")]
+        public string? RoomId { get; set; }
+        /// 主播-uid
+        [Column("anchor_uid")]
+        public string? AnchorUid { get; set; }
+        /// 观众-uid
+        [Column("audience_uid")]
+        public string? AudienceUid { get; set; }
+    }
 }

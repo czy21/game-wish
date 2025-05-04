@@ -5,6 +5,6 @@ namespace WishServer.Repository
 {
     public interface IGameGiftRepository : IRepositoryBase<long, GameGiftPO>
     {
-        
+
     }
 }

@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sunny.Framework.NLog", "..\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sunny.Framework.External", "..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.External\Sunny.Framework.External.csproj", "{A5CC7F79-29B2-48A7-A69E-1DB0E643F8B6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sunny.Framework.Gen", "..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Gen\Sunny.Framework.Gen.csproj", "{86A8A25D-C8E9-40C7-8DAE-D5ABFF6807A1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{A5CC7F79-29B2-48A7-A69E-1DB0E643F8B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5CC7F79-29B2-48A7-A69E-1DB0E643F8B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5CC7F79-29B2-48A7-A69E-1DB0E643F8B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86A8A25D-C8E9-40C7-8DAE-D5ABFF6807A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86A8A25D-C8E9-40C7-8DAE-D5ABFF6807A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86A8A25D-C8E9-40C7-8DAE-D5ABFF6807A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86A8A25D-C8E9-40C7-8DAE-D5ABFF6807A1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

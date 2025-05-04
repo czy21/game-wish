@@ -3,18 +3,21 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WishServer.Domain
 {
-    [Table("game_user")]
-    public class GameUserPO : BaseEntity<long,string>
+    [Table("game_room")]
+    public class GameRoomPO : BaseEntity<long,string>
     {
         [Column("game_id")]
         public long? GameId { get; set; }
         /// 平台
-        [Column("platform")]
-        public string? Platform { get; set; }
-        /// 用户id
-        [Column("user_id")]
-        public string? UserId { get; set; }
-        /// 头像地址
+        [Column("platfrom")]
+        public string? Platfrom { get; set; }
+        /// 房间id
+        [Column("room_id")]
+        public string? RoomId { get; set; }
+        /// 主播id
+        [Column("anchor_id")]
+        public string? AnchorId { get; set; }
+        /// 头像
         [Column("avatar_url")]
         public string? AvatarUrl { get; set; }
         /// 昵称

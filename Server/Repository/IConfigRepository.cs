@@ -5,5 +5,6 @@ namespace WishServer.Repository
 {
     public interface IConfigRepository : IRepositoryBase<long, ConfigPO>
     {
+
     }
 }
