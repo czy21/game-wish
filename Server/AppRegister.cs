@@ -4,7 +4,7 @@ using WishServer.Service;
 
 namespace WishServer
 {
-    public class ComponentRegister : Module
+    public class AppRegister : Module
     {
         protected override void Load(ContainerBuilder builder)
         {

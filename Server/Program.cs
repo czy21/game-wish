@@ -18,35 +18,20 @@ LogManager.Setup().SetupExtensions(o =>
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseNacosConfig("NacosConfig");
-builder.Services.AddNacosV2Config(builder.Configuration,null,"NacosConfig");
-
-// TODO 服务发现 目前不可用
-//builder.Services.AddNacosV2Naming(builder.Configuration,null,"NacosDiscovery");
-
-//builder.Services.AddServiceDiscovery(o =>
-//{
-//    o.RefreshPeriod = TimeSpan.FromSeconds(60);
-//})
-//.AddConfigurationServiceEndpointProvider()
-//.AddNacosServiceEndpointProvider();
-
-//builder.Services.ConfigureHttpClientDefaults(static http =>
-//{
-//    http.AddServiceDiscovery();
-//});
+builder.Services.AddNacosV2Config(builder.Configuration, null, "NacosConfig");
 
 builder.Logging.ClearProviders();
 builder.Host.UseNLog();
 
-builder.Services.Configure<ConfigProperties>(builder.Configuration.Bind);
+builder.Services.Configure<AppSetting>(builder.Configuration.Bind);
 
 builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
 builder.Host.ConfigureContainer<ContainerBuilder>(b =>
 {
-    b.RegisterModule<ComponentRegister>();
+    b.RegisterModule<AppRegister>();
 });
 
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseMySQL(builder.Configuration.Get<ConfigProperties>()?.Data.MySQL.Url ?? string.Empty));
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseMySQL(builder.Configuration.Get<AppSetting>()?.Data.MySQL.Url ?? string.Empty));
 
 builder.Services.ConfigureDbContext<AppDbContext>(opt => opt.EnableSensitiveDataLogging());
 
@@ -55,7 +40,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     //options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(c => ConnectionMultiplexer.Connect(builder.Configuration.Get<ConfigProperties>()?.Data.Redis.Url ?? string.Empty));
+builder.Services.AddSingleton<IConnectionMultiplexer>(c => ConnectionMultiplexer.Connect(builder.Configuration.Get<AppSetting>()?.Data.Redis.Url ?? string.Empty));
 
 builder.Services.AddSingleton(c => c.GetService<IConnectionMultiplexer>().GetDatabase());
 

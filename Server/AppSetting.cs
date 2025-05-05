@@ -1,9 +1,9 @@
 ﻿namespace WishServer
 {
-    public class ConfigProperties
+    public class AppSetting
     {
         public string AppName { get; set; }
-        public Platform Platform { get; set; } = new Platform();
+        public ConfigPlatform Platform { get; set; } = new ConfigPlatform();
         public ConfigData Data { get; set; } = new ConfigData();
     }
 
@@ -25,30 +25,28 @@
     
     }
 
-    public class Platform
+    public class ConfigPlatform
     {
         public string AppId { get; set; }
-        public PlatformDY DY { get; set; } = new PlatformDY();
+        public ConfigPlatformDY DY { get; set; } = new ConfigPlatformDY();
         public PlatformKS KS { get; set; } = new PlatformKS();
     }
 
 
-    public class PlatformDY
+    public class ConfigPlatformDY
     {
-        public PlatformOAuth OAuth { get; set; }
+        public ConfigPlatformOAuth OAuth { get; set; }
     }
 
     public class PlatformKS
     {
-        public PlatformOAuth OAuth { get; set; }
+        public ConfigPlatformOAuth OAuth { get; set; }
     }
 
-    public class PlatformOAuth
+    public class ConfigPlatformOAuth
     {
         public string AppId { get; set; }
 
         public string AppSecret { get; set; }
     }
-
-
 }

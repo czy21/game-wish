@@ -19,7 +19,7 @@ namespace WishServer.Service.impl
         private readonly ConcurrentDictionary<string, DYRoomSession> ROOM_SESSION_DICT = new();
 
         private readonly ILogger<DYPlatformService> _logger;
-        private readonly ConfigProperties _config;
+        private readonly AppSetting _config;
         private readonly IDatabase _redisDatabase;
         private readonly IDYOAuthClient _dyOAuthClient;
         private readonly IDYClient _dYClient;
@@ -29,7 +29,7 @@ namespace WishServer.Service.impl
 
         public DYPlatformService(
             ILogger<DYPlatformService> logger,
-            IOptions<ConfigProperties> options,
+            IOptions<AppSetting> options,
             IDatabase redisDatabase,
             IDYOAuthClient dYOAuthClient,
             IDYClient dyClient,

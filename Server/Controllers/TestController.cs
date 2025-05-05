@@ -18,11 +18,11 @@ namespace WishServer.Controllers
         IConfiguration _configuration;
         INacosConfigService _nacosConfigService;
 
-        ConfigProperties _configProperties;
+        AppSetting _configProperties;
 
-        private readonly ConfigProperties _settings1;
-        private readonly ConfigProperties _settings2;
-        private readonly ConfigProperties _settings3;
+        private readonly AppSetting _settings1;
+        private readonly AppSetting _settings2;
+        private readonly AppSetting _settings3;
 
         public TestController(ILogger<WebSocketController> logger,
             IGameUserService gameUserService,
@@ -30,9 +30,9 @@ namespace WishServer.Controllers
             IGameRoomService gameRoomService,
             IConfiguration configuration,
             INacosConfigService nacosConfigService,
-            IOptions<ConfigProperties> options1,
-            IOptionsSnapshot<ConfigProperties> options2,
-            IOptionsMonitor<ConfigProperties> options3
+            IOptions<AppSetting> options1,
+            IOptionsSnapshot<AppSetting> options2,
+            IOptionsMonitor<AppSetting> options3
             )
         {
             _logger = logger;

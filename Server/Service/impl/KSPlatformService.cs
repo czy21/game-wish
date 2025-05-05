@@ -15,13 +15,13 @@ namespace WishServer.Service.impl
         private readonly ConcurrentDictionary<string, KSRoomSession> ROOM_SESSION_DICT = new();
 
         private readonly ILogger<DYPlatformService> _logger;
-        private readonly ConfigProperties _config;
+        private readonly AppSetting _config;
         private readonly IDatabase _redisDatabase;
         private readonly IKSClient _ksClient;
 
         public KSPlatformService(
             ILogger<DYPlatformService> logger,
-            IOptions<ConfigProperties> options,
+            IOptions<AppSetting> options,
             IDatabase redisDatabase,
             IKSClient ksClient
             )

@@ -13,10 +13,10 @@ namespace WishServer.Service.impl
         private readonly ConcurrentDictionary<string, RoomSession> ROOM_SESSION_DICT = new();
 
         private readonly ILogger<DYPlatformService> _logger;
-        private readonly ConfigProperties _config;
+        private readonly AppSetting _config;
         private readonly IDatabase _redisDatabase;
 
-        public ABPlatformService(ILogger<DYPlatformService> logger, IOptions<ConfigProperties> options, IDatabase redisDatabase)
+        public ABPlatformService(ILogger<DYPlatformService> logger, IOptions<AppSetting> options, IDatabase redisDatabase)
         {
             _logger = logger;
             _config = options.Value;
