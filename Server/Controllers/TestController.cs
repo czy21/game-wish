@@ -51,7 +51,7 @@ namespace WishServer.Controllers
         }
 
         [HttpGet("db1")]
-        public async Task<GameRoomDTO?> test1([FromQuery] string roomId)
+        public async Task<List<GameRoomDTO>> test1([FromQuery] string roomId)
         {
             //await _gameUserService.UpSert();
             //await _gameGiftService.UpSert();

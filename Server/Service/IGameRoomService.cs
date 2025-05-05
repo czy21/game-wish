@@ -5,7 +5,7 @@ namespace WishServer.Service
 {
     public interface IGameRoomService : IServiceBase
     {
-        Task<GameRoomDTO?> AggRoom(string roomId);
+        Task<List<GameRoomDTO>> AggRoom(string roomId);
 
         Task<GameRoomPO?> GetOne(string roomId);
 

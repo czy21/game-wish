@@ -14,9 +14,9 @@ namespace WishServer.Service.impl
             _gameRoomRepository = gameRoomRepository;
         }
 
-        public async Task<GameRoomDTO?> AggRoom(string roomId)
+        public async Task<List<GameRoomDTO>> AggRoom(string roomId)
         {
-            return await _gameRoomRepository.AggRoom(roomId);
+            return await _gameRoomRepository.AggRoom1(roomId);
         }
 
         public async Task<GameRoomPO?> GetOne(string roomId)

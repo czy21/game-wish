@@ -1,4 +1,5 @@
-﻿using Sunny.Framework.Core.Model;
+﻿using Dapper.FluentMap.Mapping;
+using Sunny.Framework.Core.Model;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WishServer.Domain
@@ -41,6 +42,24 @@ namespace WishServer.Domain
                 UpdateUser = string.Empty,
                 Deleted = default(bool),
             };
+        }
+    }
+    public class GameRoomPOMap : EntityMap<GameRoomPO>
+    {
+        public GameRoomPOMap()
+        {
+            Map(m => m.Id).ToColumn("id");
+            Map(m => m.GameId).ToColumn("game_id");
+            Map(m => m.Platfrom).ToColumn("platfrom");
+            Map(m => m.RoomId).ToColumn("room_id");
+            Map(m => m.AnchorId).ToColumn("anchor_id");
+            Map(m => m.AvatarUrl).ToColumn("avatar_url");
+            Map(m => m.Nickname).ToColumn("nickname");
+            Map(m => m.CreateTime).ToColumn("create_time");
+            Map(m => m.CreateUser).ToColumn("create_user");
+            Map(m => m.UpdateTime).ToColumn("update_time");
+            Map(m => m.UpdateUser).ToColumn("update_user");
+            Map(m => m.Deleted).ToColumn("deleted");
         }
     }
 }
