@@ -1,5 +1,4 @@
-﻿using Dapper.FluentMap.Mapping;
-using Sunny.Framework.Core.Model;
+﻿using Sunny.Framework.Core.Model;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WishServer.Domain
@@ -31,22 +30,6 @@ namespace WishServer.Domain
                 UpdateUser = string.Empty,
                 Deleted = default(bool),
             };
-        }
-    }
-    public class ConfigPOMap : EntityMap<ConfigPO>
-    {
-        public ConfigPOMap()
-        {
-            Map(m => m.Id).ToColumn("id");
-            Map(m => m.Key).ToColumn("key");
-            Map(m => m.Value).ToColumn("value");
-            Map(m => m.Remark).ToColumn("remark");
-            Map(m => m.Category).ToColumn("category");
-            Map(m => m.CreateTime).ToColumn("create_time");
-            Map(m => m.CreateUser).ToColumn("create_user");
-            Map(m => m.UpdateTime).ToColumn("update_time");
-            Map(m => m.UpdateUser).ToColumn("update_user");
-            Map(m => m.Deleted).ToColumn("deleted");
         }
     }
 }

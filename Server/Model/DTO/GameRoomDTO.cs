@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using WishServer.Domain;
+﻿using WishServer.Domain;
 
 namespace WishServer.Model.DTO
 {

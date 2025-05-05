@@ -20,7 +20,7 @@ builder.Host.ConfigureContainer<ContainerBuilder>(b =>
     b.RegisterModule<AppRegister>();
 });
 
-AppDbContext.InitMap();
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 builder.Services.AddAutoMapper(typeof(MapperProfile));
 
