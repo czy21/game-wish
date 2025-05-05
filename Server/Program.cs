@@ -7,6 +7,7 @@ using NLog.Web;
 using Refit;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
+using Sunny.Framework.Web;
 using WishServer;
 using WishServer.Repository;
 
@@ -17,11 +18,8 @@ LogManager.Setup().SetupExtensions(o =>
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseNacosConfig("NacosConfig");
-builder.Services.AddNacosV2Config(builder.Configuration, null, "NacosConfig");
-
-builder.Logging.ClearProviders();
-builder.Host.UseNLog();
+builder.Host.UseWebConfigure();
+builder.Services.AddWebConfigure(builder.Configuration);
 
 builder.Services.Configure<AppSetting>(builder.Configuration.Bind);
 
