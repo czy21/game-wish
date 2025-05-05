@@ -50,10 +50,14 @@ builder.Services.AddRefitClient<IDYClient>().ConfigureHttpClient(c => c.BaseAddr
 
 builder.Services.AddRefitClient<IKSClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://open.kuaishou.com"));
 
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
 app.MapControllers();
 
 app.UseWebSockets();
+
+app.MapHealthChecks("/actuator/health");
 
 app.Run();
