@@ -29,5 +29,13 @@ namespace WishServer.Controllers
         {
             return Task.CompletedTask;
         }
+
+        [HttpPost("round/syncStatus")]
+        public Task RoundSyncStatus()
+        {
+            return Task.CompletedTask;
+        }
+
+        
     }
 }

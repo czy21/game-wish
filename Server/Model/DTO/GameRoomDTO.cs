@@ -2,10 +2,8 @@
 
 namespace WishServer.Model.DTO
 {
-    public class GameRoomDTO : GameRoomPO
+    public class GameRoomDTO: GameRoomPO
     {
-        public long? RoundCount { get; set; }
-
-        public List<GameRoundPO> Rounds { get; set; }
+        public GamePO Game { get; set; }
     }
 }

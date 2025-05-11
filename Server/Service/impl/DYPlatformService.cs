@@ -1,20 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Org.BouncyCastle.Utilities.Encoders;
+﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.DY;
-using System.Buffers.Text;
 using System.Collections.Concurrent;
-using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
-using WishServer.Domain;
 using WishServer.Model;
 using WishServer.Model.BO;
+using WishServer.Model.DTO;
 using WishServer.Model.DY;
 using WishServer.Repository;
-using WishServer.Repository.impl;
 using WishServer.Util;
 
 namespace WishServer.Service.impl
@@ -82,41 +77,30 @@ namespace WishServer.Service.impl
             return accessToken ?? string.Empty;
         }
 
-        private string GetRoomPrefix()
-        {
-            return $"{_config.Platform.AppId}:DY:ROOM";
-        }
-
-        private string GetRoomKey(string roomId)
-        {
-            return $"{GetRoomPrefix()}:{roomId}";
-        }
-
-        public async Task<DYWebCastInfoRes> GetLiveInfo(string gameCode, string token)
+        public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string token)
         {
             string? accessToken = await GetAccessToken(gameCode);
 
             DYWebCastInfoReq param = new() { token = token };
 
             DYWebCastInfoRes res = await _dYClient.GetLiveInfo(param, accessToken);
-
+            GameRoomDTO grDTO = new();
             if (res.data?.info?.room_id != null)
             {
-                await _redisDatabase.StringSetAsync(GetRoomKey(res.data.info.room_id.ToString()), JsonUtil.Serialize(res.data.info));
+                grDTO = new GameRoomDTO()
+                {
+                    Game =
+                    {
+                        Code = gameCode
+                    },
+                    RoomId = res.data?.info?.room_id.ToString(),
+                    AnchorId = res.data?.info.anchor_open_id,
+                    AvatarUrl = res.data?.info.avatar_url,
+                    Nickname = res.data?.info.nick_name,
+                };
+                await _redisDatabase.StringSetAsync(((IMessageHandler)this).GetRoomKey(grDTO.RoomId), JsonUtil.Serialize(grDTO), TimeSpan.FromDays(1));
             }
-
-            return res;
-        }
-
-        private async Task<DYWebCastInfo?> GetRoomInfo(string roomId)
-        {
-            string? roomInfoStr = await _redisDatabase.StringGetAsync(GetRoomKey(roomId));
-            DYWebCastInfo? roomInfo = null;
-            if (!string.IsNullOrEmpty(roomInfoStr))
-            {
-                roomInfo = JsonUtil.Deserialize<DYWebCastInfo>(roomInfoStr);
-            }
-            return roomInfo;
+            return await Task.FromResult(grDTO);
         }
 
         public async Task Init(Session session)
@@ -197,6 +181,24 @@ namespace WishServer.Service.impl
                 }
                 ROOM_SESSION_DICT.TryRemove(r.Key, out _);
             }
+        }
+
+        public async Task Ack(string roomId, int ackType, List<Dictionary<string,object?>> data)
+        {
+            GameRoomDTO? roomDTO = new();
+            string? roomStr = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetRoomKey(roomId));
+            if (roomStr != null)
+            {
+                roomDTO = JsonUtil.Deserialize<GameRoomDTO>(roomStr);
+            }
+
+            string accessToken = await GetAccessToken(roomDTO?.Game.Code ?? string.Empty);
+            await _dYClient.Ack(new DYLiveDataAckReq()
+            {
+                room_id = roomId,
+                ack_type = ackType,
+                data = JsonUtil.Serialize(data)
+            }, accessToken);
         }
     }
 }

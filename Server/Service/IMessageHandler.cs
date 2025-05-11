@@ -11,6 +11,10 @@ namespace WishServer.Service
         }
 
         Task<string> GetAccessToken(string gameCode);
+        public string GetRoomKey(string roomId)
+        {
+            return $"game:${GetPlatform()}:ROOM:${roomId}";
+        }
         Task Init(Session session);
         Task Exit(Session session);
     }

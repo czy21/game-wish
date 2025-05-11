@@ -33,7 +33,7 @@ namespace WishServer.Controllers
          * token 直播伴侣token
          */
         [HttpGet("live/info")]
-        public async Task<DYWebCastInfoRes> GetLiveInfo([FromQuery(Name = "gameCode")] string gameCode, [FromQuery(Name = "token")] string token)
+        public async Task<GameRoomDTO> GetLiveInfo([FromQuery(Name = "gameCode")] string gameCode, [FromQuery(Name = "token")] string token)
         {
             return await _dyPlatformService.GetLiveInfo(gameCode, token);
         }
@@ -92,7 +92,7 @@ namespace WishServer.Controllers
             {
                 Platform = PlatformEnum.DY.ToString(),
                 MsgType = msgType,
-                Msgs = new List<object>()
+                Msgs = new List<LiveMessageDTOBase>()
             };
 
             if (isObjMsgTypes.Contains(msgType))
@@ -105,7 +105,7 @@ namespace WishServer.Controllers
                 switch (msgType)
                 {
                     case "user_group_push":
-                        var commentMsg = new LiveMessageComment()
+                        var commentMsg = new LiveMessageCommentDTO()
                         {
                             MsgId = "",
                             UserId = jsonObj["open_id"]?.ToString() ?? "",
@@ -141,6 +141,16 @@ namespace WishServer.Controllers
                         break;
                     default:
                         break;
+                }
+                if (msgObj.Msgs.Count > 0)
+                {
+                    await _dyPlatformService.Ack(roomId, 1, [.. msgObj.Msgs.Select(t=>
+                    new Dictionary<string, object?>
+                    {
+                        { "msg_id", t.MsgId},
+                        {"msg_type", msgType },
+                        {"client_time", timestamp }
+                    })]);
                 }
             }
 

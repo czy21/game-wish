@@ -16,7 +16,7 @@ namespace WishServer.AutoMapper
 
     public class LiveMessageMapper
     {
-        public static T MapFromDy<T>(JsonNode jsonObj) where T : LiveMessageBase, new()
+        public static T MapFromDy<T>(JsonNode jsonObj) where T : LiveMessageDTOBase, new()
         {
             return new T()
             {
@@ -27,23 +27,23 @@ namespace WishServer.AutoMapper
                 Timestamp = long.Parse(jsonObj["timestamp"]?.ToString() ?? ""),
             };
         }
-        public static LiveMessageComment MapFromDyComment(JsonNode jsonObj)
+        public static LiveMessageCommentDTO MapFromDyComment(JsonNode jsonObj)
         {
-            var t = MapFromDy<LiveMessageComment>(jsonObj);
+            var t = MapFromDy<LiveMessageCommentDTO>(jsonObj);
             t.Content = jsonObj["content"]?.ToString() ?? "";
             return t;
         }
 
-        public static LiveMessageLike MapFromDyLike(JsonNode jsonObj)
+        public static LiveMessageLikeDTO MapFromDyLike(JsonNode jsonObj)
         {
-            var msg = MapFromDy<LiveMessageLike>(jsonObj);
+            var msg = MapFromDy<LiveMessageLikeDTO>(jsonObj);
             msg.Num = long.Parse(jsonObj["num"]?.ToString() ?? "");
             return msg;
         }
 
-        public static LiveMessageGift MapFromDyGift(JsonNode jsonObj)
+        public static LiveMessageGiftDTO MapFromDyGift(JsonNode jsonObj)
         {
-            var msg = MapFromDy<LiveMessageGift>(jsonObj);
+            var msg = MapFromDy<LiveMessageGiftDTO>(jsonObj);
             msg.GiftId = jsonObj["sec_gift_id"]?.ToString()??"";
             msg.GiftNum =long.Parse(jsonObj["gift_num"]?.ToString() ?? "");
             msg.GiftValue = long.Parse(jsonObj["gift_value"]?.ToString() ?? "");

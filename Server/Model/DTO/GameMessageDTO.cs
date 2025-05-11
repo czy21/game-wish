@@ -1,7 +1,7 @@
 ﻿namespace WishServer.Model.DTO
 {
 
-    public class GameMessage<T>
+    public class GameMessageDTO<T>
     {
         public string MsgId { get; set; }
         public string MsgType { get; set; }
@@ -13,7 +13,7 @@
         public string Nickname { get; set; }
     }
 
-    public class LiveMessageBase
+    public class LiveMessageDTOBase
     {
         public string MsgId { get; set; }     //  消息Id
         public string UserId { get; set; }    // 用户Id
@@ -22,12 +22,12 @@
         public long Timestamp { get; set; }
     }
 
-    public class LiveMessageComment : LiveMessageBase
+    public class LiveMessageCommentDTO : LiveMessageDTOBase
     {
         public string Content;
     }
 
-    public class LiveMessageGift : LiveMessageBase
+    public class LiveMessageGiftDTO : LiveMessageDTOBase
     {
         public string GiftId { get; set; }
         public string GiftName { get; set; }
@@ -35,7 +35,7 @@
         public long GiftValue { get; set; } // 礼物总价值，单位分
     }
 
-    public class LiveMessageLike : LiveMessageBase
+    public class LiveMessageLikeDTO : LiveMessageDTOBase
     {
         public long Num; // 点赞数量
     }
