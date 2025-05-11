@@ -11,6 +11,7 @@ using WishServer.Repository;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseWebConfigure();
+
 builder.Services.AddWebConfigure(builder.Configuration);
 
 builder.Services.Configure<AppSetting>(builder.Configuration.Bind);

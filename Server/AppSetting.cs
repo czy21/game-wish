@@ -2,6 +2,9 @@
 {
     public class AppSetting
     {
+        /// <summary>
+        /// 应用名称
+        /// </summary>
         public string AppName { get; set; }
         public ConfigPlatform Platform { get; set; } = new ConfigPlatform();
         public ConfigData Data { get; set; } = new ConfigData();
@@ -29,7 +32,7 @@
     {
         public string AppId { get; set; }
         public ConfigPlatformDY DY { get; set; } = new ConfigPlatformDY();
-        public ConfigPlatformKS KS { get; set; } = new ConfigPlatformKS();
+        public PlatformKS KS { get; set; } = new PlatformKS();
     }
 
 
@@ -38,7 +41,7 @@
         public ConfigPlatformOAuth OAuth { get; set; }
     }
 
-    public class ConfigPlatformKS
+    public class PlatformKS
     {
         public ConfigPlatformOAuth OAuth { get; set; }
     }
