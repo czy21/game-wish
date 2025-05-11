@@ -48,12 +48,7 @@ namespace WishServer.Service.impl
             return Task.CompletedTask;
         }
 
-        public string GetAccessTokenKey()
-        {
-            return "AB-" + _config.Platform.AppId + "-token";
-        }
-
-        public Task<string> GetAccessToken()
+        public Task<string> GetAccessToken(string gameCode)
         {
             return Task.FromResult("");
         }

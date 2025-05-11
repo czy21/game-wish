@@ -10,6 +10,9 @@
         ROOM_JOIN = 1002,
         ROOM_LEAVE = 1003,
         ROOM_CHAT = 1004,
-        ROOM_REPORT = 1005
+        ROOM_REPORT = 1005,
+        Live_Content = 1101,
+        Live_Gift = 1102,
+        Live_Like = 1103
     }
 }

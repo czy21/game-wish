@@ -1,14 +1,20 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Org.BouncyCastle.Utilities.Encoders;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.DY;
+using System.Buffers.Text;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Security.Cryptography;
+using System.Text;
 using WishServer.Domain;
 using WishServer.Model;
+using WishServer.Model.BO;
 using WishServer.Model.DY;
 using WishServer.Repository;
+using WishServer.Repository.impl;
 using WishServer.Util;
 
 namespace WishServer.Service.impl
@@ -24,8 +30,7 @@ namespace WishServer.Service.impl
         private readonly IDYOAuthClient _dyOAuthClient;
         private readonly IDYClient _dYClient;
         private readonly IConfigService _configService;
-        private readonly IWishUserRepository _wishUserRepository;
-        private readonly IWishItemRepository _wishItemRepository;
+        private readonly IGameAppRepository _gameAppRepository;
 
         public DYPlatformService(
             ILogger<DYPlatformService> logger,
@@ -34,8 +39,7 @@ namespace WishServer.Service.impl
             IDYOAuthClient dYOAuthClient,
             IDYClient dyClient,
             IConfigService configService,
-            IWishUserRepository wishUserRepository,
-            IWishItemRepository wishItemRepository
+            IGameAppRepository gameAppRepository
             )
         {
             _logger = logger;
@@ -44,8 +48,7 @@ namespace WishServer.Service.impl
             _dyOAuthClient = dYOAuthClient;
             _dYClient = dyClient;
             _configService = configService;
-            _wishUserRepository = wishUserRepository;
-            _wishItemRepository = wishItemRepository;
+            _gameAppRepository = gameAppRepository;
         }
 
         public PlatformEnum GetPlatform()
@@ -53,27 +56,27 @@ namespace WishServer.Service.impl
             return PlatformEnum.DY;
         }
 
-        public string GetAccessTokenKey()
+        public async Task<string> GetAccessToken(string gameCode)
         {
-            return $"{_config.Platform.AppId}:DY:access_token";
-        }
-
-        public async Task<string> GetAccessToken()
-        {
-            DYAccessTokenReq req = new()
-            {
-                appid = _config.Platform.DY.OAuth.AppId,
-                secret = _config.Platform.DY.OAuth.AppSecret,
-                grant_type = "client_credential"
-            };
-
-            string? accessToken = await _redisDatabase.StringGetAsync(GetAccessTokenKey());
+            string? accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
             if (string.IsNullOrEmpty(accessToken))
             {
+                GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+                if (gameApp == null)
+                {
+                    throw new Exception($"GameApp {gameCode} ${GetPlatform()} not exist");
+                }
+                DYAccessTokenReq req = new()
+                {
+                    appid = gameApp.GameApp.AppId,
+                    secret = gameApp.GameApp.AppSecret,
+                    grant_type = "client_credential"
+                };
+
                 DYAccessTokenRes res = await _dyOAuthClient.GetAccessToken(req);
                 if (res.data != null)
                 {
-                    accessToken = await _redisDatabase.StringSetAndGetAsync(GetAccessTokenKey(), res.data.access_token, TimeSpan.FromHours(1));
+                    accessToken = await _redisDatabase.StringSetAndGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode), res.data.access_token, TimeSpan.FromHours(1));
                 }
             }
             return accessToken ?? string.Empty;
@@ -89,9 +92,9 @@ namespace WishServer.Service.impl
             return $"{GetRoomPrefix()}:{roomId}";
         }
 
-        public async Task<DYWebCastInfoRes> GetLiveInfo(string token)
+        public async Task<DYWebCastInfoRes> GetLiveInfo(string gameCode, string token)
         {
-            string? accessToken = await GetAccessToken();
+            string? accessToken = await GetAccessToken(gameCode);
 
             DYWebCastInfoReq param = new() { token = token };
 
@@ -127,6 +130,16 @@ namespace WishServer.Service.impl
             await DoRoomTask(session.RoomId);
         }
 
+        public string SignatureReceive(Dictionary<string, string> headers, string rawBody)
+        {
+            var sortedParam = headers.OrderBy(item => item.Key).ToDictionary(item => item.Key, item => item.Value);
+            string paramStr = string.Join("&", sortedParam.Select(item => $"{item.Key}={item.Value}"));
+            string signStr = paramStr + this._config.Platform.DY.OAuth.AppSecret;
+            byte[] inputBytes = Encoding.UTF8.GetBytes(signStr);
+            byte[] hashBytes = MD5.HashData(inputBytes);
+            return Convert.ToBase64String(hashBytes);
+        }
+
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("DY Push Check Task is running.");
@@ -138,7 +151,7 @@ namespace WishServer.Service.impl
                         await DoRoomTask(k);
                     }
                 },
-                null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+                null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
             return Task.CompletedTask;
         }
 
@@ -149,9 +162,10 @@ namespace WishServer.Service.impl
 
         private async Task DoRoomTask(string roomId)
         {
-            foreach (var t in ROOM_SESSION_DICT[roomId].Tasks.Where(t => t.TaskStatus != "SUCCESS"))
+            DYRoomSession roomSession = ROOM_SESSION_DICT[roomId];
+            foreach (var t in roomSession.Tasks.Where(t => t.TaskStatus != "SUCCESS"))
             {
-                string? accessToken = await GetAccessToken();
+                string? accessToken = await GetAccessToken(roomSession.Session.GameCode);
                 DYLiveDataTaskRes taskRes = await _dYClient.StartTaskPush(new()
                 {
                     appid = _config.Platform.DY.OAuth.AppId,
@@ -171,7 +185,7 @@ namespace WishServer.Service.impl
             var removeRooms = ROOM_SESSION_DICT.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
             foreach (var r in removeRooms)
             {
-                string? accessToken = await GetAccessToken();
+                string? accessToken = await GetAccessToken(r.Value.Session.GameCode);
                 foreach (var t in r.Value.Tasks)
                 {
                     await _dYClient.StopTaskPush(new()
@@ -184,123 +198,5 @@ namespace WishServer.Service.impl
                 ROOM_SESSION_DICT.TryRemove(r.Key, out _);
             }
         }
-
-        private string GetRoomUserPrefix(string roomId, string userId)
-        {
-            return "{" + $"{GetRoomKey(roomId)}:USER:{userId}" + "}";
-        }
-
-        private string GetRoomUserContentKey(string roomId, string userId)
-        {
-            return $"{GetRoomUserPrefix(roomId, userId)}:content";
-        }
-
-        private string GetRoomUserMoneyKey(string roomId, string userId)
-        {
-            return $"{GetRoomUserPrefix(roomId, userId)}:money";
-        }
-
-        public async Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param)
-        {
-            if (roomId == null || param == null)
-            {
-                return;
-            }
-
-            if (ROOM_SESSION_DICT.TryGetValue(roomId, out var roomSession))
-            {
-                if (roomSession.Session.WebSocket.State == WebSocketState.Open)
-                {
-                    string paramStr = JsonUtil.Serialize(param);
-                    if (msgType == "live_comment")
-                    {
-                        List<DYLiveCommentMessage> comments = (JsonUtil.Deserialize<List<DYLiveCommentMessage>>(paramStr) ?? []).Where(t => t.content.EndsWith(" 寄")).ToList();
-                        foreach (var t in comments)
-                        {
-                            await _redisDatabase.ListRightPushAsync(GetRoomUserContentKey(roomId, t.sec_openid), t.content);
-                            await _redisDatabase.KeyExpireAsync(GetRoomUserContentKey(roomId, t.sec_openid), TimeSpan.FromDays(1));
-                            await CaculateMoneyAndSaveContent(roomId, roomSession, t);
-                        }
-                    }
-                    if (msgType == "live_gift")
-                    {
-                        List<DYLiveGiftMessage> gifts = (JsonUtil.Deserialize<List<DYLiveGiftMessage>>(paramStr) ?? []).ToList();
-                        foreach (var t in gifts)
-                        {
-                            await _redisDatabase.StringIncrementAsync(GetRoomUserMoneyKey(roomId, t.sec_openid), t.gift_value);
-                            await _redisDatabase.KeyExpireAsync(GetRoomUserMoneyKey(roomId, t.sec_openid), TimeSpan.FromDays(1));
-                            await CaculateMoneyAndSaveContent(roomId, roomSession, t);
-                        }
-                    }
-                    //await roomSession.Session.WebSocket.SendJsonAsnyc(
-                    //       new Dictionary<string, object?>()
-                    //       {
-                    //           ["msgType"] = msgType,
-                    //           ["msg"] = param
-                    //       });
-                }
-            }
-        }
-
-        private async Task CaculateMoneyAndSaveContent(string roomId, RoomSession roomSession, DYMessageBase userInfo)
-        {
-            DYWebCastInfo? roomInfo = await GetRoomInfo(roomId);
-            if (roomInfo == null) return;
-            string? anchorId = roomInfo.anchor_open_id;
-            if (anchorId == null) return;
-            //string anchorId = "1";
-
-            int cost = await _configService.GetValue<int>("WishServer", "CONTENT_COST");
-
-            var script = @"
-            local val = redis.call('GET', KEYS[2])
-            local len = redis.call('LLEN',KEYS[1])
-            if not val then
-                val = 0
-            else
-                val = tonumber(val)
-            end
-
-            local tmp = val - tonumber(ARGV[1])
-
-            if tmp >= 0 and len > 0 then
-               redis.call('SET', KEYS[2], tmp)
-               return redis.call('LPOP',KEYS[1])
-            end
-            return nil
-        ";
-            var content = await _redisDatabase.ScriptEvaluateAsync(script, [GetRoomUserContentKey(roomId, userInfo.sec_openid), GetRoomUserMoneyKey(roomId, userInfo.sec_openid)], [cost]);
-            if (content == null)
-            {
-                return;
-            }
-            WishUserPO? wishUserPO = await _wishUserRepository.GetDbSet()
-                .Where(t =>
-                    t.RoomId == roomId &&
-                    t.AnchorUid == anchorId &&
-                    t.AudienceUid == userInfo.sec_openid
-                ).FirstOrDefaultAsync();
-            if (wishUserPO == null)
-            {
-                wishUserPO = new()
-                {
-                    RoomId = roomId,
-                    AnchorUid = anchorId,
-                    AudienceUid = userInfo.sec_openid
-                };
-                await _wishUserRepository.InsertAsync(wishUserPO);
-            }
-            await _wishItemRepository.InsertAsync(new()
-            {
-                UserId = wishUserPO.Id,
-                Content = (string?)content,
-            });
-        }
-
-        //[OnMessage(MessageKind.ROOM_REPORT)]
-        //public async Task HandleRoomReport(Session session, MessageDTO messageDTO)
-        //{
-
-        //}
     }
 }

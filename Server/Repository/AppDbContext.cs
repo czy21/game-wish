@@ -15,6 +15,7 @@ namespace WishServer.Repository
         }
         public DbSet<ConfigPO> Configs { get; set; }
         public DbSet<GamePO> Games { get; set; }
+        public DbSet<GameAppPO> GameApps { get; set; }
         public DbSet<GameGiftPO> GameGifts { get; set; }
         public DbSet<GameRoomPO> GameRooms { get; set; }
         public DbSet<GameRoundPO> GameRounds { get; set; }

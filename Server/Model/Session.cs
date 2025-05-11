@@ -10,6 +10,10 @@ namespace WishServer.Model
 
         public WebSocket WebSocket { get; set; }
 
-        public string? RoomId {  get; set; }
+        public string GameCode { get; set; }
+
+        public string RoomId { get; set; }
+
+        public PlatformEnum Platform { get; set; }
     }
 }

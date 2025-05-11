@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Reflection;
@@ -24,12 +25,17 @@ namespace WishServer.Controllers
 
         public static readonly ConcurrentDictionary<string, Session> CLIENTID_SESION_DICT = new();
 
-        [Route("/ws")]
+        [Route("/socket")]
         public async Task Get()
         {
             if (!HttpContext.WebSockets.IsWebSocketRequest)
             {
                 HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
+            if (!HttpContext.Request.Query.TryGetValue("gameCode", out var gameCode))
+            {
                 return;
             }
 
@@ -55,9 +61,10 @@ namespace WishServer.Controllers
                 ClientId = Guid.NewGuid().ToString(),
                 ConnectionInfo = HttpContext.Connection,
                 WebSocket = webSocket,
+                GameCode = gameCode,
+                Platform = (PlatformEnum)platform,
                 RoomId = roomId
             };
-
             if (_messageHandlerDict.TryGetValue((PlatformEnum)platform, out var messageHandler))
             {
                 await messageHandler.Init(session);
@@ -102,8 +109,7 @@ namespace WishServer.Controllers
             _logger.LogInformation($"Client {session.ClientId} disconnected. Total clients: {CLIENTID_SESION_DICT.Count}");
         }
 
-
-        public async Task HandleMessage(IMessageHandler? messageHandler, Session session,  string message)
+        public async Task HandleMessage(IMessageHandler? messageHandler, Session session, string message)
         {
             if (string.IsNullOrEmpty(message) || messageHandler == null)
             {
@@ -149,8 +155,7 @@ namespace WishServer.Controllers
                         continue;
                     }
                 }
-                Task? task = methodInfo?.Invoke(messageHandler, methodParams) as Task;
-                if (task != null) await task;
+                if (methodInfo?.Invoke(messageHandler, methodParams) is Task task) await task;
             }
         }
     }

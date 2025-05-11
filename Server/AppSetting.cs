@@ -29,7 +29,7 @@
     {
         public string AppId { get; set; }
         public ConfigPlatformDY DY { get; set; } = new ConfigPlatformDY();
-        public PlatformKS KS { get; set; } = new PlatformKS();
+        public ConfigPlatformKS KS { get; set; } = new ConfigPlatformKS();
     }
 
 
@@ -38,7 +38,7 @@
         public ConfigPlatformOAuth OAuth { get; set; }
     }
 
-    public class PlatformKS
+    public class ConfigPlatformKS
     {
         public ConfigPlatformOAuth OAuth { get; set; }
     }

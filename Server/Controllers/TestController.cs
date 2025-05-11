@@ -23,6 +23,7 @@ namespace WishServer.Controllers
         private readonly AppSetting _settings2;
         private readonly AppSetting _settings3;
 
+
         public TestController(ILogger<WebSocketController> logger,
             IGameUserService gameUserService,
             IGameGiftService gameGiftService,
