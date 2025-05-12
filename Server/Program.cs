@@ -4,6 +4,7 @@ using Refit;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.Web;
+using Sunny.Framework.Web.Middleware;
 using WishServer;
 using WishServer.AutoMapper;
 using WishServer.Repository;
@@ -40,6 +41,8 @@ builder.Services.AddRefitClient<IDYClient>().ConfigureHttpClient(c => c.BaseAddr
 builder.Services.AddRefitClient<IKSClient>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://open.kuaishou.com"));
 
 var app = builder.Build();
+
+app.UseMiddleware<HttpLogMiddleware>();
 
 app.MapControllers();
 

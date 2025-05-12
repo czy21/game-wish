@@ -190,12 +190,12 @@ namespace WishServer.Service.impl
         public async Task Ack(string gameCode, string roomId, int ackType, List<Dictionary<string, object?>> data)
         {
             string accessToken = await GetAccessToken(gameCode);
-            //await _dYClient.Ack(new DYLiveDataAckReq()
-            //{
-            //    room_id = roomId,
-            //    ack_type = ackType,
-            //    data = JsonUtil.Serialize(data)
-            //}, accessToken);
+            await _dYClient.Ack(new DYLiveDataAckReq()
+            {
+                room_id = roomId,
+                ack_type = ackType,
+                data = JsonUtil.Serialize(data)
+            }, accessToken);
         }
     }
 }
