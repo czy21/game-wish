@@ -4,6 +4,7 @@ using Nacos.V2;
 using WishServer.Domain;
 using WishServer.Model.DTO;
 using WishServer.Service;
+using ZstdSharp.Unsafe;
 
 namespace WishServer.Controllers
 {
@@ -16,6 +17,7 @@ namespace WishServer.Controllers
         IGameRoomService _gameRoomService;
         IConfiguration _configuration;
         INacosConfigService _nacosConfigService;
+        IWishUserService _wishUserService;
 
         AppSetting _configProperties;
 
@@ -32,7 +34,8 @@ namespace WishServer.Controllers
             INacosConfigService nacosConfigService,
             IOptions<AppSetting> options1,
             IOptionsSnapshot<AppSetting> options2,
-            IOptionsMonitor<AppSetting> options3
+            IOptionsMonitor<AppSetting> options3,
+            IWishUserService wishUserService
             )
         {
             _logger = logger;
@@ -48,6 +51,7 @@ namespace WishServer.Controllers
             _settings3 = options3.CurrentValue;
 
             _nacosConfigService = nacosConfigService;
+            _wishUserService = wishUserService;
         }
 
         [HttpGet("db1")]
@@ -71,16 +75,10 @@ namespace WishServer.Controllers
             return await Task.FromResult(GameRoomPO.Empty());
         }
 
-        [HttpGet("config")]
-        public async Task<object> config()
+        [HttpGet("db4")]
+        public async Task test4([FromQuery(Name = "id")] long id, [FromQuery(Name = "error")] bool error)
         {
-            return await Task.FromResult(new Dictionary<string, object>
-            {
-                {"o1",_settings1.AppName },
-                {"o2",_settings2.AppName },
-                {"o3",_settings3.AppName },
-                {"setting",_settings2 }
-            });
+            await _wishUserService.TestTransaction(id, error);
         }
     }
 }

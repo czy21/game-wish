@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Google.Protobuf.WellKnownTypes;
 using System.Text.Json.Nodes;
 using WishServer.Domain;
 using WishServer.Model.DTO;
@@ -20,13 +21,26 @@ namespace WishServer.AutoMapper
         {
             return new T()
             {
-                MsgId = jsonObj["msg_id"]?.ToString() ?? "",
-                UserId = jsonObj["sec_openid"]?.ToString() ?? "",
-                AvatarUrl = jsonObj["avatar_url"]?.ToString() ?? "",
-                Nickname = jsonObj["nickname"]?.ToString() ?? "",
+                MsgId = jsonObj["msg_id"]?.ToString(),
+                UserId = jsonObj["sec_openid"]?.ToString(),
+                AvatarUrl = jsonObj["avatar_url"]?.ToString(),
+                Nickname = jsonObj["nickname"]?.ToString(),
                 Timestamp = long.Parse(jsonObj["timestamp"]?.ToString() ?? ""),
             };
         }
+
+        public static LiveMessageCommentDTO MapFromDyGroup(JsonNode jsonObj, long? timestamp)
+        {
+            return new LiveMessageCommentDTO()
+            {
+                UserId = jsonObj["open_id"]?.ToString(),
+                AvatarUrl = jsonObj["avatar_url"]?.ToString(),
+                Nickname = jsonObj["nickname"]?.ToString(),
+                Content = jsonObj["group_id"]?.ToString(),
+                Timestamp = timestamp
+            };
+        }
+
         public static LiveMessageCommentDTO MapFromDyComment(JsonNode jsonObj)
         {
             var t = MapFromDy<LiveMessageCommentDTO>(jsonObj);
@@ -44,8 +58,8 @@ namespace WishServer.AutoMapper
         public static LiveMessageGiftDTO MapFromDyGift(JsonNode jsonObj)
         {
             var msg = MapFromDy<LiveMessageGiftDTO>(jsonObj);
-            msg.GiftId = jsonObj["sec_gift_id"]?.ToString()??"";
-            msg.GiftNum =long.Parse(jsonObj["gift_num"]?.ToString() ?? "");
+            msg.GiftId = jsonObj["sec_gift_id"]?.ToString() ?? "";
+            msg.GiftNum = long.Parse(jsonObj["gift_num"]?.ToString() ?? "");
             msg.GiftValue = long.Parse(jsonObj["gift_value"]?.ToString() ?? "");
             return msg;
         }

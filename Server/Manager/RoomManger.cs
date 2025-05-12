@@ -19,7 +19,7 @@ namespace WishServer.Manager
         {
             var sub = _redis.GetSubscriber();
 
-            sub.Subscribe(new RedisChannel("game:ROOM:*", RedisChannel.PatternMode.Pattern), async (channel, value) =>
+            sub.Subscribe(new RedisChannel("game:ROOM_CHANNEL:*", RedisChannel.PatternMode.Pattern), async (channel, value) =>
             {
                 var platform = channel.ToString().Split(':')[2];
                 var roomId = channel.ToString().Split(':')[3];
@@ -44,7 +44,7 @@ namespace WishServer.Manager
             Session session = WebSocketController.CLIENTID_SESION_DICT.Where(t => t.Value.RoomId == roomId).FirstOrDefault().Value;
             if (session == null)
             {
-                await _redis.GetSubscriber().PublishAsync(new RedisChannel($"game:ROOM:${platform}:${roomId}", RedisChannel.PatternMode.Pattern), message);
+                await _redis.GetSubscriber().PublishAsync(new RedisChannel($"game:ROOM_CHANNEL:${platform}:${roomId}", RedisChannel.PatternMode.Pattern), message);
             }
             else
             {

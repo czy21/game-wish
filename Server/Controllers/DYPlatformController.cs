@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Sunny.Framework.External.Client.DY;
+using System.Dynamic;
 using System.Text;
 using System.Text.Json.Nodes;
 using WishServer.AutoMapper;
@@ -52,6 +53,7 @@ namespace WishServer.Controllers
 
         public async Task<CommonResult<object>> OnMessage()
         {
+            string gameCode = Request.Query["gameCode"].ToString();
             string roomId = Request.Headers["x-roomid"].ToString();
             string msgType = Request.Headers["x-msg-type"].ToString();
             _ = long.TryParse(Request.Headers["x-timestamp"].ToString(), out long timestamp);
@@ -81,19 +83,19 @@ namespace WishServer.Controllers
             // 3. 重置流位置
             Request.Body.Position = 0;
 
-            bool validMsg = await ValidateMessage(rawBody);
+            bool validMsg = await ValidateMessage(gameCode, rawBody);
             if (!validMsg)
             {
                 HttpContext.Response.StatusCode = 403;
                 return await Task.FromResult(CommonResult<object>.Fail(HttpContext.Response.StatusCode, "请求验证失败"));
             }
 
-            var msgObj = new
-            {
-                Platform = PlatformEnum.DY.ToString(),
-                MsgType = msgType,
-                Msgs = new List<LiveMessageDTOBase>()
-            };
+            dynamic msgObj = new ExpandoObject();
+
+            msgObj.Platform = PlatformEnum.DY.ToString();
+            msgObj.MsgType = msgType;
+
+            var msgs = new List<LiveMessageDTOBase>();
 
             if (isObjMsgTypes.Contains(msgType))
             {
@@ -105,23 +107,15 @@ namespace WishServer.Controllers
                 switch (msgType)
                 {
                     case "user_group_push":
-                        var commentMsg = new LiveMessageCommentDTO()
-                        {
-                            MsgId = "",
-                            UserId = jsonObj["open_id"]?.ToString() ?? "",
-                            AvatarUrl = jsonObj["avatar_url"]?.ToString() ?? "",
-                            Nickname = jsonObj["nickname"]?.ToString() ?? "",
-                            Content = jsonObj["group_id"]?.ToString() ?? "",
-                            Timestamp = timestamp
-                        };
-                        msgObj.Msgs.Add(commentMsg);
+                        msgObj.MsgType = MessageKind.Live_Comment.ToString();
+                        msgs.Add(LiveMessageMapper.MapFromDyGroup(jsonObj, timestamp));
                         break;
                     default:
                         break;
                 }
             }
 
-            if (isObjMsgTypes.Contains(msgType))
+            if (isArrMsgTypes.Contains(msgType))
             {
                 JsonArray? jsonArr = JsonUtil.Deserialize<JsonArray>(rawBody);
                 if (jsonArr == null)
@@ -131,46 +125,50 @@ namespace WishServer.Controllers
                 switch (msgType)
                 {
                     case "live_comment":
-                        msgObj.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyComment(t)).ToList());
+                        msgObj.MsgType = MessageKind.Live_Comment.ToString();
+                        msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyComment(t)).ToList());
                         break;
                     case "live_gift":
-                        msgObj.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyGift(t)).ToList());
+                        msgObj.MsgType = MessageKind.Live_Gift.ToString();
+                        msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyGift(t)).ToList());
                         break;
                     case "live_like":
-                        msgObj.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyLike(t)).ToList());
+                        msgObj.MsgType = MessageKind.Live_Like.ToString();
+                        msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyLike(t)).ToList());
                         break;
                     default:
                         break;
                 }
-                if (msgObj.Msgs.Count > 0)
+                if (msgs.Count > 0)
                 {
-                    await _dyPlatformService.Ack(roomId, 1, [.. msgObj.Msgs.Select(t=>
+                    await _dyPlatformService.Ack(gameCode, roomId, 1, [.. msgs.Select(t=>
                     new Dictionary<string, object?>
                     {
-                        { "msg_id", t.MsgId},
-                        {"msg_type", msgType },
-                        {"client_time", timestamp }
+                        { "msg_id", t.MsgId },
+                        { "msg_type", msgType },
+                        { "client_time", timestamp }
                     })]);
                 }
             }
 
-            if (msgObj.Msgs.Count > 0)
+            if (msgs.Count > 0)
             {
+                msgObj.Msgs = msgs;
                 await _roomManager.SendMessageToRoom(PlatformEnum.DY, roomId, JsonUtil.Serialize(msgObj));
             }
 
             return await Task.FromResult(CommonResult<object>.Ok(new object()));
         }
 
-        private async Task<bool> ValidateMessage(string rawBody)
+        private async Task<bool> ValidateMessage(string gameCode, string rawBody)
         {
             string msgType = Request.Headers["x-msg-type"].ToString();
 
             List<string> signHeaderKeys = ["x-timestamp", "x-nonce-str", "x-roomid", "x-msg-type"];
             string fromSignature = Request.Headers["x-signature"].ToString();
             Dictionary<string, string> signHeaders = Request.Headers.Where(t => signHeaderKeys.Contains(t.Key)).ToDictionary(t => t.Key, t => t.Value.ToString());
-            string selfSignature = _dyPlatformService.SignatureReceive(signHeaders, rawBody);
-            _logger.LogDebug($"valid sign dyin ${msgType,-20} fromSign: ${fromSignature} selfSign: ${selfSignature}");
+            string selfSignature = await _dyPlatformService.SignatureReceive(gameCode, signHeaders, rawBody);
+            _logger.LogDebug($"valid sign dyin {msgType,-20} fromSign: {fromSignature} selfSign: {selfSignature}");
             return await Task.FromResult(fromSignature == selfSignature);
         }
     }

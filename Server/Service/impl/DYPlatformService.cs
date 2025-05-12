@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.DY;
@@ -87,12 +88,11 @@ namespace WishServer.Service.impl
             GameRoomDTO grDTO = new();
             if (res.data?.info?.room_id != null)
             {
+                GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
                 grDTO = new GameRoomDTO()
                 {
-                    Game =
-                    {
-                        Code = gameCode
-                    },
+                    Game = gameApp?.Game,
+                    GameApp = gameApp?.GameApp,
                     RoomId = res.data?.info?.room_id.ToString(),
                     AnchorId = res.data?.info.anchor_open_id,
                     AvatarUrl = res.data?.info.avatar_url,
@@ -100,6 +100,8 @@ namespace WishServer.Service.impl
                 };
                 await _redisDatabase.StringSetAsync(((IMessageHandler)this).GetRoomKey(grDTO.RoomId), JsonUtil.Serialize(grDTO), TimeSpan.FromDays(1));
             }
+            grDTO.Game = null;
+            grDTO.GameApp = null;
             return await Task.FromResult(grDTO);
         }
 
@@ -114,11 +116,13 @@ namespace WishServer.Service.impl
             await DoRoomTask(session.RoomId);
         }
 
-        public string SignatureReceive(Dictionary<string, string> headers, string rawBody)
+        public async Task<string> SignatureReceive(string gameCode, Dictionary<string, string> headers, string rawBody)
         {
+            GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+
             var sortedParam = headers.OrderBy(item => item.Key).ToDictionary(item => item.Key, item => item.Value);
             string paramStr = string.Join("&", sortedParam.Select(item => $"{item.Key}={item.Value}"));
-            string signStr = paramStr + this._config.Platform.DY.OAuth.AppSecret;
+            string signStr = paramStr + rawBody + gameApp.GameApp.AppSecretPush;
             byte[] inputBytes = Encoding.UTF8.GetBytes(signStr);
             byte[] hashBytes = MD5.HashData(inputBytes);
             return Convert.ToBase64String(hashBytes);
@@ -183,22 +187,15 @@ namespace WishServer.Service.impl
             }
         }
 
-        public async Task Ack(string roomId, int ackType, List<Dictionary<string,object?>> data)
+        public async Task Ack(string gameCode, string roomId, int ackType, List<Dictionary<string, object?>> data)
         {
-            GameRoomDTO? roomDTO = new();
-            string? roomStr = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetRoomKey(roomId));
-            if (roomStr != null)
-            {
-                roomDTO = JsonUtil.Deserialize<GameRoomDTO>(roomStr);
-            }
-
-            string accessToken = await GetAccessToken(roomDTO?.Game.Code ?? string.Empty);
-            await _dYClient.Ack(new DYLiveDataAckReq()
-            {
-                room_id = roomId,
-                ack_type = ackType,
-                data = JsonUtil.Serialize(data)
-            }, accessToken);
+            string accessToken = await GetAccessToken(gameCode);
+            //await _dYClient.Ack(new DYLiveDataAckReq()
+            //{
+            //    room_id = roomId,
+            //    ack_type = ackType,
+            //    data = JsonUtil.Serialize(data)
+            //}, accessToken);
         }
     }
 }

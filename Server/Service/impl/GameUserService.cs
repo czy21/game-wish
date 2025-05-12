@@ -7,13 +7,11 @@ namespace WishServer.Service.impl
     public class GameUserService : ServiceBase, IGameUserService
     {
 
-        AppDbContext _dbMasterContext;
         IGameUserRepository _gameUserRepository;
 
 
-        public GameUserService(AppDbContext dbMasterContext, IGameUserRepository gameUserRepository)
+        public GameUserService( IGameUserRepository gameUserRepository)
         {
-            _dbMasterContext = dbMasterContext;
             _gameUserRepository = gameUserRepository;
         }
 

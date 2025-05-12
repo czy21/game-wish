@@ -8,13 +8,11 @@ namespace WishServer.Service.impl
     public class GameGiftService : ServiceBase, IGameGiftService
     {
 
-        AppDbContext _dbMasterContext;
         IGameGiftRepository _gameGiftRepository;
 
 
-        public GameGiftService(AppDbContext dbMasterContext, IGameGiftRepository gameGiftRepository)
+        public GameGiftService(IGameGiftRepository gameGiftRepository)
         {
-            _dbMasterContext = dbMasterContext;
             _gameGiftRepository = gameGiftRepository;
         }
 

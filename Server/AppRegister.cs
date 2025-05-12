@@ -12,13 +12,13 @@ namespace WishServer
                 .AsClosedTypesOf(typeof(IRepositoryBase<,>))
                 .AsSelf()
                 .AsImplementedInterfaces()
-                .SingleInstance();
+                .InstancePerLifetimeScope(); // 避免DbContext线程不安全
 
             builder.RegisterAssemblyTypes(ThisAssembly)
                 .Where(t => t.IsAssignableTo<IServiceBase>() || t.IsAssignableTo<IMessageHandler>())
                 .AsSelf()
                 .AsImplementedInterfaces()
-                .SingleInstance();
+                .InstancePerLifetimeScope(); // 避免DbContext线程不安全
         }
     }
 }

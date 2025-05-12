@@ -34,7 +34,7 @@ namespace WishServer.Service.impl
             await using var transaction = await _dbMasterContext.Database.BeginTransactionAsync();
             try
             {
-                //await _wishUserRepository.InsertAsync(u1);
+                await _wishUserRepository.InsertAsync(u1);
 
                 if (error)
                 {
@@ -46,18 +46,18 @@ namespace WishServer.Service.impl
                 //await _wishUserRepository.DeleteByIdAsync(id);
 
                 // batchInsert
-                List<WishUserPO> pos = Enumerable.Range(0, 10).Select(t =>
-                {
-                    return new WishUserPO()
-                    {
-                        Platform = PlatformEnum.KS.ToString(),
-                        AnchorUid = t.ToString(),
-                        AudienceUid = "",
-                        CreateTime = DateTime.Now,
-                        UpdateTime = DateTime.Now,
-                    };
-                }).ToList();
-                await _wishUserRepository.BatchInsertAsync(pos);
+                //List<WishUserPO> pos = Enumerable.Range(0, 10).Select(t =>
+                //{
+                //    return new WishUserPO()
+                //    {
+                //        Platform = PlatformEnum.KS.ToString(),
+                //        AnchorUid = t.ToString(),
+                //        AudienceUid = "",
+                //        CreateTime = DateTime.Now,
+                //        UpdateTime = DateTime.Now,
+                //    };
+                //}).ToList();
+                //await _wishUserRepository.BatchInsertAsync(pos);
                 await transaction.CommitAsync();
             }
             catch (Exception)
