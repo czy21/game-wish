@@ -63,5 +63,39 @@ namespace WishServer.AutoMapper
             msg.GiftValue = long.Parse(jsonObj["gift_value"]?.ToString() ?? "");
             return msg;
         }
+
+        public static T MapFromKs<T>(JsonNode jsonObj, long timestamp) where T : LiveMessageDTOBase, new()
+        {
+            return new T()
+            {
+                UserId = jsonObj["userInfo"]?["userId"]?.ToString(),
+                AvatarUrl = jsonObj["userInfo"]?["headUrl"]?.ToString(),
+                Nickname = jsonObj["userInfo"]?["userName"]?.ToString(),
+                Timestamp = timestamp,
+            };
+        }
+
+        public static LiveMessageCommentDTO MapFromKsComment(JsonNode jsonObj, long timestamp)
+        {
+            var t = MapFromKs<LiveMessageCommentDTO>(jsonObj, timestamp);
+            t.Content = jsonObj["content"]?.ToString() ?? "";
+            return t;
+        }
+
+        public static LiveMessageLikeDTO MapFromKsLike(JsonNode jsonObj, long timestamp)
+        {
+            var msg = MapFromKs<LiveMessageLikeDTO>(jsonObj, timestamp);
+            msg.Num = long.Parse(jsonObj["count"]?.ToString() ?? "");
+            return msg;
+        }
+
+        public static LiveMessageGiftDTO MapFromKsGift(JsonNode jsonObj, long timestamp)
+        {
+            var msg = MapFromKs<LiveMessageGiftDTO>(jsonObj, timestamp);
+            msg.GiftId = jsonObj["giftId"]?.ToString() ?? "";
+            msg.GiftNum = long.Parse(jsonObj["giftCount"]?.ToString() ?? "");
+            msg.GiftValue = long.Parse(jsonObj["giftTotalPrice"]?.ToString() ?? "") * 10;
+            return msg;
+        }
     }
 }

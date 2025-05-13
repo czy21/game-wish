@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Sunny.Framework.External.Client.DY;
+using Sunny.Framework.Core.Model;
 using System.Dynamic;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -40,32 +40,26 @@ namespace WishServer.Controllers
         }
 
         [HttpPost("test")]
-        public async Task<CommonResult<object>> Test()
+        public async Task<CommonResult<object>> Test([FromQuery(Name = "gameCode")] string gameCode)
         {
-            return await OnMessage();
+            return await OnMessage(gameCode);
         }
 
         [HttpPost("push")]
-        public async Task<CommonResult<object>> Push()
+        public async Task<CommonResult<object>> Push([FromQuery(Name = "gameCode")] string gameCode)
         {
-            return await OnMessage();
+            return await OnMessage(gameCode);
         }
 
-        public async Task<CommonResult<object>> OnMessage()
+        public async Task<CommonResult<object>> OnMessage([FromQuery(Name = "gameCode")] string gameCode)
         {
-            string gameCode = Request.Query["gameCode"].ToString();
             string roomId = Request.Headers["x-roomid"].ToString();
             string msgType = Request.Headers["x-msg-type"].ToString();
             _ = long.TryParse(Request.Headers["x-timestamp"].ToString(), out long timestamp);
 
-            if (timestamp == 0)
-            {
-                timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            }
-
-            List<string> isObjMsgTypes = ["user_group_push"];
-            List<string> isArrMsgTypes = ["live_comment", "live_gift", "live_like"];
-            List<string> allowMsgTypes = [.. isObjMsgTypes, .. isArrMsgTypes];
+            HashSet<string> isObjMsgTypes = _dyPlatformService.GetObjMsgTypes();
+            HashSet<string> isArrMsgTypes = _dyPlatformService.GetArrMsgTypes();
+            HashSet<string> allowMsgTypes = _dyPlatformService.GetPushMsgTypes();
 
             if (string.IsNullOrEmpty(roomId) || string.IsNullOrEmpty(msgType) || !allowMsgTypes.Contains(msgType))
             {
@@ -90,12 +84,12 @@ namespace WishServer.Controllers
                 return await Task.FromResult(CommonResult<object>.Fail(HttpContext.Response.StatusCode, "请求验证失败"));
             }
 
-            dynamic msgObj = new ExpandoObject();
-
-            msgObj.Platform = PlatformEnum.DY.ToString();
-            msgObj.MsgType = msgType;
-
-            var msgs = new List<LiveMessageDTOBase>();
+            GameMessageDTO<LiveMessageDTOBase> gameMessageDTO = new()
+            {
+                Platform = _dyPlatformService.GetPlatform().ToString(),
+                SrcType = msgType,
+                Msgs = []
+            };
 
             if (isObjMsgTypes.Contains(msgType))
             {
@@ -107,8 +101,8 @@ namespace WishServer.Controllers
                 switch (msgType)
                 {
                     case "user_group_push":
-                        msgObj.MsgType = MessageKind.Live_Comment.ToString();
-                        msgs.Add(LiveMessageMapper.MapFromDyGroup(jsonObj, timestamp));
+                        gameMessageDTO.MsgType = MessageKind.Live_Comment.ToString();
+                        gameMessageDTO.Msgs.Add(LiveMessageMapper.MapFromDyGroup(jsonObj, timestamp));
                         break;
                     default:
                         break;
@@ -125,23 +119,23 @@ namespace WishServer.Controllers
                 switch (msgType)
                 {
                     case "live_comment":
-                        msgObj.MsgType = MessageKind.Live_Comment.ToString();
-                        msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyComment(t)).ToList());
+                        gameMessageDTO.MsgType = MessageKind.Live_Comment.ToString();
+                        gameMessageDTO.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyComment(t)).ToList());
                         break;
                     case "live_gift":
-                        msgObj.MsgType = MessageKind.Live_Gift.ToString();
-                        msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyGift(t)).ToList());
+                        gameMessageDTO.MsgType = MessageKind.Live_Gift.ToString();
+                        gameMessageDTO.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyGift(t)).ToList());
                         break;
                     case "live_like":
-                        msgObj.MsgType = MessageKind.Live_Like.ToString();
-                        msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyLike(t)).ToList());
+                        gameMessageDTO.MsgType = MessageKind.Live_Like.ToString();
+                        gameMessageDTO.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyLike(t)).ToList());
                         break;
                     default:
                         break;
                 }
-                if (msgs.Count > 0)
+                if (gameMessageDTO.Msgs.Count > 0)
                 {
-                    await _dyPlatformService.Ack(gameCode, roomId, 1, [.. msgs.Select(t=>
+                    await _dyPlatformService.Ack(gameCode, roomId, 1, [.. gameMessageDTO.Msgs.Select(t=>
                     new Dictionary<string, object?>
                     {
                         { "msg_id", t.MsgId },
@@ -151,10 +145,10 @@ namespace WishServer.Controllers
                 }
             }
 
-            if (msgs.Count > 0)
+            if (gameMessageDTO.Msgs.Count > 0)
             {
-                msgObj.Msgs = msgs;
-                await _roomManager.SendMessageToRoom(PlatformEnum.DY, roomId, JsonUtil.Serialize(msgObj));
+                gameMessageDTO.Msgs = gameMessageDTO.Msgs;
+                await _roomManager.SendMessageToRoom(_dyPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDTO));
             }
 
             return await Task.FromResult(CommonResult<object>.Ok(new object()));
@@ -166,7 +160,7 @@ namespace WishServer.Controllers
 
             List<string> signHeaderKeys = ["x-timestamp", "x-nonce-str", "x-roomid", "x-msg-type"];
             string fromSignature = Request.Headers["x-signature"].ToString();
-            Dictionary<string, string> signHeaders = Request.Headers.Where(t => signHeaderKeys.Contains(t.Key)).ToDictionary(t => t.Key, t => t.Value.ToString());
+            Dictionary<string, object> signHeaders = Request.Headers.Where(t => signHeaderKeys.Contains(t.Key)).ToDictionary(t => t.Key, t => (object)t.Value.ToString());
             string selfSignature = await _dyPlatformService.SignatureReceive(gameCode, signHeaders, rawBody);
             _logger.LogDebug($"valid sign dyin {msgType,-20} fromSign: {fromSignature} selfSign: {selfSignature}");
             return await Task.FromResult(fromSignature == selfSignature);

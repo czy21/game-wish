@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.DY;
+using Sunny.Framework.External.Util;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
@@ -82,9 +83,9 @@ namespace WishServer.Service.impl
         {
             string? accessToken = await GetAccessToken(gameCode);
 
-            DYWebCastInfoReq param = new() { token = token };
+            DYLiveInfoReq param = new() { token = token };
 
-            DYWebCastInfoRes res = await _dYClient.GetLiveInfo(param, accessToken);
+            DYWebCastResult<DYLiveInfoResData> res = await _dYClient.GetLiveInfo(param, accessToken);
             GameRoomDTO grDTO = new();
             if (res.data?.info?.room_id != null)
             {
@@ -116,16 +117,10 @@ namespace WishServer.Service.impl
             await DoRoomTask(session.RoomId);
         }
 
-        public async Task<string> SignatureReceive(string gameCode, Dictionary<string, string> headers, string rawBody)
+        public async Task<string> SignatureReceive(string gameCode, Dictionary<string, object> headers, string rawBody)
         {
             GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
-
-            var sortedParam = headers.OrderBy(item => item.Key).ToDictionary(item => item.Key, item => item.Value);
-            string paramStr = string.Join("&", sortedParam.Select(item => $"{item.Key}={item.Value}"));
-            string signStr = paramStr + rawBody + gameApp.GameApp.AppSecretPush;
-            byte[] inputBytes = Encoding.UTF8.GetBytes(signStr);
-            byte[] hashBytes = MD5.HashData(inputBytes);
-            return Convert.ToBase64String(hashBytes);
+            return DYUtil.SignatureReceive(headers, rawBody, gameApp?.GameApp.AppSecretPush ?? string.Empty);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -196,6 +191,26 @@ namespace WishServer.Service.impl
                 ack_type = ackType,
                 data = JsonUtil.Serialize(data)
             }, accessToken);
+        }
+
+        public HashSet<string> GetObjMsgTypes()
+        {
+            return ["user_group_push"];
+        }
+
+        public HashSet<string> GetArrMsgTypes()
+        {
+            return ["live_comment", "live_like", "live_gift"];
+        }
+
+        public HashSet<string> GetPushMsgTypes()
+        {
+            return [.. GetObjMsgTypes(), .. GetArrMsgTypes()];
+        }
+
+        public HashSet<string> GetAckMsgTypes()
+        {
+            return ["live_gift"];
         }
     }
 }

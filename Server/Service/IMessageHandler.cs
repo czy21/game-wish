@@ -15,6 +15,7 @@ namespace WishServer.Service
         {
             return $"game:${GetPlatform()}:ROOM:${roomId}";
         }
+
         Task Init(Session session);
         Task Exit(Session session);
     }

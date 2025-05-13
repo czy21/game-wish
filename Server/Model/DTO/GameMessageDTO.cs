@@ -3,19 +3,19 @@
 
     public class GameMessageDTO<T>
     {
-        public string MsgId { get; set; }
-        public string MsgType { get; set; }
-        public List<T> Msgs { get; set; }
-
-        public PlatformEnum Platform { get; set; }
-        public string RoomId { get; set; }
-        public string AnchorUrl { get; set; }
-        public string Nickname { get; set; }
+        public string? MsgId { get; set; }
+        public string? SrcType { get; set; }
+        public string? MsgType { get; set; }
+        public List<T>? Msgs { get; set; }
+        public string? Platform { get; set; }
+        public string? RoomId { get; set; }
+        public string? AnchorUrl { get; set; }
+        public string? Nickname { get; set; }
     }
 
     public class LiveMessageDTOBase
     {
-        public string? MsgId { get; set; }     //  消息Id
+        public string? MsgId { get; set; }     // 消息Id
         public string? UserId { get; set; }    // 用户Id
         public string? AvatarUrl { get; set; } // 用户头像
         public string? Nickname { get; set; }  // 用户昵称

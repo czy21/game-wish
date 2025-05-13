@@ -1,15 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.KS;
+using Sunny.Framework.External.Util;
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using System.Text;
 using WishServer.Model;
 using WishServer.Model.BO;
+using WishServer.Model.DTO;
 using WishServer.Model.KS;
 using WishServer.Repository;
+using WishServer.Util;
 
 namespace WishServer.Service.impl
 {
@@ -74,22 +74,34 @@ namespace WishServer.Service.impl
 
         public string SignatureRequest(Dictionary<string, object> param)
         {
-
-            var trimmedParam = param.Where(item => !string.IsNullOrEmpty(item.Value.ToString())).ToDictionary(item => item.Key, item => item.Value);
-
-            var sortedParam = trimmedParam.OrderBy(item => item.Key).ToDictionary(item => item.Key, item => item.Value);
-
-            string paramStr = string.Join("&", sortedParam.Select(item => $"{item.Key}={item.Value}"));
-            string signStr = paramStr + this._config.Platform.KS.OAuth.AppSecret;
-
-            byte[] inputBytes = Encoding.UTF8.GetBytes(signStr);
-            byte[] hashBytes = MD5.HashData(inputBytes);
-            return Convert.ToHexStringLower(hashBytes);
+            return KSUtil.SignatureRequest(param, _config.Platform.KS.OAuth.AppSecret);
         }
 
-        public string SignatureRecive()
+        public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string roomId)
         {
-            return "";
+            return await Task.FromResult(new GameRoomDTO());
+        }
+
+        public async Task<string> SignatureRecive(string gameCode, string rawBody)
+        {
+            GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+            return KSUtil.SignatureReceive(rawBody, gameApp?.GameApp.AppSecret ?? string.Empty);
+        }
+
+
+        public async Task Ack(string gameCode, string roomId, string ackType, Dictionary<string, object> data)
+        {
+            GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+            string accessToken = await this.GetAccessToken(gameCode);
+            var param = new Dictionary<string, object>()
+                {
+                    {"roomCode",roomId},
+                    {"timestamp",DateTimeOffset.Now.ToUnixTimeSeconds()},
+                    {"ackType",ackType },
+                    {"data",JsonUtil.Serialize(data) },
+                };
+            param["sign"] = SignatureRequest(param);
+            await _ksClient.Ack(gameApp?.GameApp?.AppId ?? string.Empty, accessToken, data);
         }
 
         public async Task Init(Session session)
@@ -137,7 +149,7 @@ namespace WishServer.Service.impl
                     {"actionType","start" },
                 };
                 param["sign"] = SignatureRequest(param);
-                KSBindRes res = await _ksClient.Bind(_config.Platform.DY.OAuth.AppId, accessToken, param);
+                KSResult res = await _ksClient.Bind(_config.Platform.DY.OAuth.AppId, accessToken, param);
                 if (res.result == 1)
                 {
                     ROOM_SESSION_DICT[roomId].Bind.TaskStatus = "SUCCESS";
@@ -159,9 +171,19 @@ namespace WishServer.Service.impl
                     {"actionType","stop" },
                 };
                 param["sign"] = SignatureRequest(param);
-                KSBindRes res = await _ksClient.Bind(_config.Platform.DY.OAuth.AppId, accessToken, param);
+                await _ksClient.Bind(_config.Platform.DY.OAuth.AppId, accessToken, param);
                 ROOM_SESSION_DICT.TryRemove(r.Key, out _);
             }
+        }
+
+        public HashSet<string> GetPushMsgTypes()
+        {
+            return ["liveComment", "liveLike", "giftSend"];
+        }
+
+        public HashSet<string> GetAckMsgTypes()
+        {
+            return ["giftSend"];
         }
     }
 }
