@@ -1,4 +1,6 @@
-﻿namespace WishServer.Model.DTO
+﻿using System.Text.Json.Serialization;
+
+namespace WishServer.Model.DTO
 {
 
     public class GameMessageDTO<T>
@@ -13,6 +15,9 @@
         public string? Nickname { get; set; }
     }
 
+    [JsonDerivedType(typeof(LiveMessageCommentDTO))]
+    [JsonDerivedType(typeof(LiveMessageGiftDTO))]
+    [JsonDerivedType(typeof(LiveMessageLikeDTO))]
     public class LiveMessageDTOBase
     {
         public string? MsgId { get; set; }     // 消息Id
@@ -24,7 +29,7 @@
 
     public class LiveMessageCommentDTO : LiveMessageDTOBase
     {
-        public string? Content;
+        public string? Content { get; set; }
     }
 
     public class LiveMessageGiftDTO : LiveMessageDTOBase
@@ -37,6 +42,6 @@
 
     public class LiveMessageLikeDTO : LiveMessageDTOBase
     {
-        public long? Num; // 点赞数量
+        public long? Num { get; set; }  // 点赞数量
     }
 }

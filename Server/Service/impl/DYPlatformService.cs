@@ -108,13 +108,13 @@ namespace WishServer.Service.impl
 
         public async Task Init(Session session)
         {
-            if (session.RoomId == null)
-            {
-                return;
-            }
+            //if (session.RoomId == null)
+            //{
+            //    return;
+            //}
 
-            ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new DYRoomSession() { Session = session }, (k, v) => v);
-            await DoRoomTask(session.RoomId);
+            //ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new DYRoomSession() { Session = session }, (k, v) => v);
+            //await DoRoomTask(session.RoomId);
         }
 
         public async Task<string> SignatureReceive(string gameCode, Dictionary<string, object> headers, string rawBody)

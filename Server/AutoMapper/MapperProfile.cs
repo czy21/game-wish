@@ -43,15 +43,15 @@ namespace WishServer.AutoMapper
 
         public static LiveMessageCommentDTO MapFromDyComment(JsonNode jsonObj)
         {
-            var t = MapFromDy<LiveMessageCommentDTO>(jsonObj);
-            t.Content = jsonObj["content"]?.ToString() ?? "";
-            return t;
+            var msg = MapFromDy<LiveMessageCommentDTO>(jsonObj);
+            msg.Content = jsonObj["content"]?.ToString() ?? "";
+            return msg;
         }
 
         public static LiveMessageLikeDTO MapFromDyLike(JsonNode jsonObj)
         {
             var msg = MapFromDy<LiveMessageLikeDTO>(jsonObj);
-            msg.Num = long.Parse(jsonObj["num"]?.ToString() ?? "");
+            msg.Num = long.Parse(jsonObj["like_num"]?.ToString() ?? "");
             return msg;
         }
 

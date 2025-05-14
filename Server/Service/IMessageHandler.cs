@@ -7,18 +7,18 @@ namespace WishServer.Service
         PlatformEnum GetPlatform();
         public string GetAccessTokenKey(string gameCode)
         {
-            return $"game:${GetPlatform()}:{gameCode}:access_token";
+            return $"game:{GetPlatform()}:{gameCode}:access_token";
         }
 
         Task<string> GetAccessToken(string gameCode);
         public string GetRoomKey(string roomId)
         {
-            return $"game:${GetPlatform()}:ROOM:${roomId}";
+            return $"game:{GetPlatform()}:ROOM:{roomId}";
         }
 
         public string GetMsgKey(string msgId)
         {
-            return $"game:${GetPlatform()}:MSG:${msgId}";
+            return $"game:{GetPlatform()}:MSG:{msgId}";
         }
 
         Task Init(Session session);
