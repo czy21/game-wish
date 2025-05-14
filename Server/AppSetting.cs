@@ -6,15 +6,15 @@
         /// 应用名称
         /// </summary>
         public string AppName { get; set; }
-        public ConfigPlatform Platform { get; set; } = new ConfigPlatform();
-        public ConfigData Data { get; set; } = new ConfigData();
+        public ConfigPlatform Platform { get; set; } = new();
+        public ConfigData Data { get; set; } = new();
     }
 
     public class ConfigData
     {
-        public ConfigDataRedis Redis { get; set; } = new ConfigDataRedis();
+        public ConfigDataRedis Redis { get; set; } = new();
 
-        public ConfigDataMySQL MySQL { get; set; } = new ConfigDataMySQL();
+        public ConfigDataMySQL MySQL { get; set; } = new();
     }
 
     public class ConfigDataRedis
@@ -31,25 +31,5 @@
     public class ConfigPlatform
     {
         public string AppId { get; set; }
-        public ConfigPlatformDY DY { get; set; } = new ConfigPlatformDY();
-        public PlatformKS KS { get; set; } = new PlatformKS();
-    }
-
-
-    public class ConfigPlatformDY
-    {
-        public ConfigPlatformOAuth OAuth { get; set; }
-    }
-
-    public class PlatformKS
-    {
-        public ConfigPlatformOAuth OAuth { get; set; }
-    }
-
-    public class ConfigPlatformOAuth
-    {
-        public string AppId { get; set; }
-
-        public string AppSecret { get; set; }
     }
 }

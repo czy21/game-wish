@@ -1,11 +1,9 @@
-﻿using Microsoft.Extensions.Options;
+﻿using System.Collections.Concurrent;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.KS;
 using Sunny.Framework.External.Util;
-using System.Collections.Concurrent;
 using WishServer.Model;
-using WishServer.Model.BO;
 using WishServer.Model.DTO;
 using WishServer.Model.KS;
 using WishServer.Repository;
@@ -13,68 +11,57 @@ using WishServer.Util;
 
 namespace WishServer.Service.impl
 {
-    public class KSPlatformService : IMessageHandler
+    public class KSPlatformService : AbstractMessageHandler, IMessageHandler
     {
-        private readonly ConcurrentDictionary<string, KSRoomSession> ROOM_SESSION_DICT = new();
+        private readonly ConcurrentDictionary<string, KSRoomSession> _roomSessionDict = new();
 
         private readonly ILogger<DYPlatformService> _logger;
-        private readonly AppSetting _config;
         private readonly IDatabase _redisDatabase;
         private readonly IKSClient _ksClient;
 
-        private readonly IGameAppRepository _gameAppRepository;
-
         public KSPlatformService(
             ILogger<DYPlatformService> logger,
-            IOptions<AppSetting> options,
+            IGameAppRepository gameAppRepository,
             IDatabase redisDatabase,
-            IKSClient ksClient,
-            IGameAppRepository gameAppRepository
-            )
+            IKSClient ksClient
+        ) : base(logger, gameAppRepository, redisDatabase)
         {
             _logger = logger;
-            _config = options.Value;
             _redisDatabase = redisDatabase;
             _ksClient = ksClient;
-            _gameAppRepository = gameAppRepository;
         }
 
-        public PlatformEnum GetPlatform()
+        public override PlatformEnum GetPlatform()
         {
             return PlatformEnum.KS;
         }
 
-        public async Task<string> GetAccessToken(string gameCode)
+        public override async Task<string> GetAccessToken(string gameCode)
         {
             string accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
-            if (string.IsNullOrEmpty(accessToken))
+            if (!string.IsNullOrEmpty(accessToken)) return accessToken;
+            
+            var gameApp = await GetGameApp(gameCode);
+            KSAccessTokenReq req = new()
             {
+                app_id = gameApp.GameApp.AppId,
+                app_secret = gameApp.GameApp.AppSecret,
+                grant_type = "client_credentials"
+            };
 
-                GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
-                if (gameApp == null)
-                {
-                    throw new Exception($"GameApp {gameCode} ${GetPlatform()} not exist");
-                }
-
-                KSAccessTokenReq req = new()
-                {
-                    app_id = gameApp.GameApp.AppId,
-                    app_secret = gameApp.GameApp.AppSecret,
-                    grant_type = "client_credentials"
-                };
-
-                KSAccessTokenRes res = await _ksClient.GetAccessToken(req);
-                if (res.result == 1)
-                {
-                    accessToken = await _redisDatabase.StringSetAndGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode), res.access_token, TimeSpan.FromHours(1));
-                }
+            var res = await _ksClient.GetAccessToken(req);
+            if (res.result == 1)
+            {
+                accessToken = await _redisDatabase.StringSetAndGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode), res.access_token, TimeSpan.FromHours(1));
             }
+
             return accessToken;
         }
 
-        public string SignatureRequest(Dictionary<string, object> param)
+        private async Task<string> SignatureRequest(string gameCode, Dictionary<string, object> param)
         {
-            return KSUtil.SignatureRequest(param, _config.Platform.KS.OAuth.AppSecret);
+            var gameApp = await GetGameApp(gameCode);
+            return await Task.FromResult(KSUtil.SignatureRequest(param, gameApp.GameApp.AppSecret));
         }
 
         public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string roomId)
@@ -82,31 +69,30 @@ namespace WishServer.Service.impl
             return await Task.FromResult(new GameRoomDTO());
         }
 
-        public async Task<string> SignatureRecive(string gameCode, string rawBody)
+        public async Task<string> SignatureReceive(string gameCode, string rawBody)
         {
-            GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
-            return KSUtil.SignatureReceive(rawBody, gameApp?.GameApp.AppSecret ?? string.Empty);
+            var gameApp = await GetGameApp(gameCode);
+            return KSUtil.SignatureReceive(rawBody, gameApp?.GameApp.AppSecret);
         }
-
 
         public async Task Ack(string gameCode, string roomId, string ackType, Dictionary<string, object> data)
         {
-            GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
-            string accessToken = await this.GetAccessToken(gameCode);
+            var accessToken = await this.GetAccessToken(gameCode);
+            var gameApp = await GetGameApp(gameCode);
             var param = new Dictionary<string, object>()
-                {
-                    {"roomCode",roomId},
-                    {"timestamp",DateTimeOffset.Now.ToUnixTimeSeconds()},
-                    {"ackType",ackType },
-                    {"data",JsonUtil.Serialize(data) },
-                };
-            param["sign"] = SignatureRequest(param);
-            await _ksClient.Ack(gameApp?.GameApp?.AppId ?? string.Empty, accessToken, data);
+            {
+                { "roomCode", roomId },
+                { "timestamp", DateTimeOffset.Now.ToUnixTimeSeconds() },
+                { "ackType", ackType },
+                { "data", JsonUtil.Serialize(data) },
+            };
+            param["sign"] = SignatureRequest(gameCode, param);
+            await _ksClient.Ack(gameApp?.GameApp?.AppId, accessToken, data);
         }
 
-        public async Task Init(Session session)
+        public override async Task Init(Session session)
         {
-            ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new KSRoomSession() { Session = session }, (k, v) => v);
+            _roomSessionDict.AddOrUpdate(session.RoomId, new KSRoomSession() { Session = session }, (k, v) => v);
             await DoRoomTask(session.RoomId);
         }
 
@@ -116,7 +102,7 @@ namespace WishServer.Service.impl
             _ = new Timer(
                 async (object state) =>
                 {
-                    foreach (var k in ROOM_SESSION_DICT.Keys)
+                    foreach (var k in _roomSessionDict.Keys)
                     {
                         await DoRoomTask(k);
                     }
@@ -125,49 +111,46 @@ namespace WishServer.Service.impl
             return Task.CompletedTask;
         }
 
-        public Task SendMessages(string roomId, string msgType, List<Dictionary<string, object>> param)
+        public override async Task DoRoomTask(string roomId)
         {
-            return Task.CompletedTask;
-        }
-
-        private async Task DoRoomTask(string roomId)
-        {
-            KSRoomSession roomSession = ROOM_SESSION_DICT[roomId];
+            var roomSession = _roomSessionDict[roomId];
             if (roomSession.Bind.TaskStatus != "SUCCESS")
             {
-                string accessToken = await GetAccessToken(roomSession.Session.GameCode);
+                var accessToken = await GetAccessToken(roomSession.Session.GameCode);
+                var gameApp = await GetGameApp(roomSession.Session.GameCode);
                 var param = new Dictionary<string, object>()
                 {
-                    {"roomCode",roomId},
-                    {"timestamp",DateTimeOffset.Now.ToUnixTimeSeconds()},
-                    {"moduleType","bind" },
-                    {"actionType","start" },
+                    { "roomCode", roomId },
+                    { "timestamp", DateTimeOffset.Now.ToUnixTimeSeconds() },
+                    { "moduleType", "bind" },
+                    { "actionType", "start" },
                 };
-                param["sign"] = SignatureRequest(param);
-                KSResult res = await _ksClient.Bind(_config.Platform.DY.OAuth.AppId, accessToken, param);
+                param["sign"] = SignatureRequest(roomSession.Session.GameCode, param);
+                var res = await _ksClient.Bind(gameApp.GameApp.AppId, accessToken, param);
                 if (res.result == 1)
                 {
-                    ROOM_SESSION_DICT[roomId].Bind.TaskStatus = "SUCCESS";
+                    _roomSessionDict[roomId].Bind.TaskStatus = "SUCCESS";
                 }
             }
         }
 
-        public async Task Exit(Session session)
+        public override async Task Exit(Session session)
         {
-            var removeRooms = ROOM_SESSION_DICT.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
+            var removeRooms = _roomSessionDict.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
             foreach (var r in removeRooms)
             {
-                string accessToken = await GetAccessToken(r.Value.Session.GameCode);
+                var accessToken = await GetAccessToken(r.Value.Session.GameCode);
+                var gameApp = await GetGameApp(r.Value.Session.GameCode);
                 var param = new Dictionary<string, object>()
                 {
-                    {"roomCode",r.Key},
-                    {"timestamp",DateTimeOffset.Now.ToUnixTimeSeconds()},
-                    {"moduleType","bind" },
-                    {"actionType","stop" },
+                    { "roomCode", r.Key },
+                    { "timestamp", DateTimeOffset.Now.ToUnixTimeSeconds() },
+                    { "moduleType", "bind" },
+                    { "actionType", "stop" },
                 };
-                param["sign"] = SignatureRequest(param);
-                await _ksClient.Bind(_config.Platform.DY.OAuth.AppId, accessToken, param);
-                ROOM_SESSION_DICT.TryRemove(r.Key, out _);
+                param["sign"] = SignatureRequest(r.Value.Session.GameCode, param);
+                await _ksClient.Bind(gameApp.GameApp.AppId, accessToken, param);
+                _roomSessionDict.TryRemove(r.Key, out _);
             }
         }
 
@@ -176,7 +159,7 @@ namespace WishServer.Service.impl
             return ["liveComment", "liveLike", "giftSend"];
         }
 
-        public HashSet<string> GetAckMsgTypes()
+        public static HashSet<string> GetAckMsgTypes()
         {
             return ["giftSend"];
         }

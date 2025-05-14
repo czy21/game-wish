@@ -117,7 +117,7 @@ namespace WishServer.Controllers
                 return await Task.FromResult(CommonResult<object>.Ok(new object()));
             }
 
-            if (_ksPlatformService.GetAckMsgTypes().Contains(msgType))
+            if (KSPlatformService.GetAckMsgTypes().Contains(msgType))
             {
                 Dictionary<string, object> actData = new()
                     {
@@ -141,7 +141,7 @@ namespace WishServer.Controllers
                 return await Task.FromResult(false);
             }
             string fromSignature = Request.Headers["kwaisign"].ToString();
-            string selfSignature = await _ksPlatformService.SignatureRecive(gameCode, rawBody);
+            string selfSignature = await _ksPlatformService.SignatureReceive(gameCode, rawBody);
             _logger.LogDebug($"valid sign dyin {msgType,-20} fromSign: {fromSignature} selfSign: {selfSignature}");
             return await Task.FromResult(fromSignature == selfSignature);
         }

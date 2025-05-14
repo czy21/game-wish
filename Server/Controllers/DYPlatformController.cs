@@ -57,9 +57,9 @@ namespace WishServer.Controllers
             string msgType = Request.Headers["x-msg-type"].ToString();
             _ = long.TryParse(Request.Headers["x-timestamp"].ToString(), out long timestamp);
 
-            HashSet<string> isObjMsgTypes = _dyPlatformService.GetObjMsgTypes();
-            HashSet<string> isArrMsgTypes = _dyPlatformService.GetArrMsgTypes();
-            HashSet<string> allowMsgTypes = _dyPlatformService.GetPushMsgTypes();
+            HashSet<string> isObjMsgTypes = DYPlatformService.GetObjMsgTypes();
+            HashSet<string> isArrMsgTypes = DYPlatformService.GetArrMsgTypes();
+            HashSet<string> allowMsgTypes = DYPlatformService.GetPushMsgTypes();
 
             if (string.IsNullOrEmpty(roomId) || string.IsNullOrEmpty(msgType) || !allowMsgTypes.Contains(msgType))
             {
@@ -135,7 +135,7 @@ namespace WishServer.Controllers
                 }
             }
 
-            if (_dyPlatformService.GetAckMsgTypes().Contains(msgType))
+            if (DYPlatformService.GetAckMsgTypes().Contains(msgType))
             {
                 List<Dictionary<string, object>> ackData = [
                    .. gameMessageDTO.Msgs.Select(t=>

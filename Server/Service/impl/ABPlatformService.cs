@@ -28,6 +28,11 @@ namespace WishServer.Service.impl
             return PlatformEnum.AB;
         }
 
+        public Task DoRoomTask(string roomId)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task Init(Session session)
         {
             if (session.RoomId == null)

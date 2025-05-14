@@ -80,5 +80,16 @@ namespace WishServer.Controllers
         {
             await _wishUserService.TestTransaction(id, error);
         }
+
+        [HttpGet("settings")]
+        public async Task<Dictionary<string, object>> settings()
+        {
+            return await Task.FromResult(new Dictionary<string, object>()
+            {
+                { "_settings1", _settings1 },
+                { "_settings2", _settings2 },
+                { "_settings3", _settings3 },
+            });
+        }
     }
 }
