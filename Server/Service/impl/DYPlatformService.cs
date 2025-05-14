@@ -76,7 +76,7 @@ namespace WishServer.Service.impl
                     accessToken = await _redisDatabase.StringSetAndGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode), res.data.access_token, TimeSpan.FromHours(1));
                 }
             }
-            return accessToken ?? string.Empty;
+            return accessToken;
         }
 
         public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string token)
@@ -108,13 +108,8 @@ namespace WishServer.Service.impl
 
         public async Task Init(Session session)
         {
-            //if (session.RoomId == null)
-            //{
-            //    return;
-            //}
-
-            //ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new DYRoomSession() { Session = session }, (k, v) => v);
-            //await DoRoomTask(session.RoomId);
+            ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new DYRoomSession() { Session = session }, (k, v) => v);
+            await DoRoomTask(session.RoomId);
         }
 
         public async Task<string> SignatureReceive(string gameCode, Dictionary<string, object> headers, string rawBody)

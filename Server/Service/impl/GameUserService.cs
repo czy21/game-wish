@@ -24,7 +24,7 @@ namespace WishServer.Service.impl
                 AvatarUrl = "a1",
                 Nickname = "n5"
             };
-            List<GameUserPO> a = new List<GameUserPO> { };
+            List<GameUserPO> a = new() { };
             var updators = new Dictionary<Expression<Func<GameUserPO, object>>, string>
             {
                 {t=>t.Nickname,"values(nickname)"}

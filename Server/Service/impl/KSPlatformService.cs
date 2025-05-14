@@ -69,7 +69,7 @@ namespace WishServer.Service.impl
                     accessToken = await _redisDatabase.StringSetAndGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode), res.access_token, TimeSpan.FromHours(1));
                 }
             }
-            return accessToken ?? string.Empty;
+            return accessToken;
         }
 
         public string SignatureRequest(Dictionary<string, object> param)
@@ -106,11 +106,6 @@ namespace WishServer.Service.impl
 
         public async Task Init(Session session)
         {
-            if (session.RoomId == null)
-            {
-                return;
-            }
-
             ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new KSRoomSession() { Session = session }, (k, v) => v);
             await DoRoomTask(session.RoomId);
         }

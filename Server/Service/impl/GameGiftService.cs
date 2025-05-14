@@ -34,7 +34,7 @@ namespace WishServer.Service.impl
                 GiftCount = 1,
                 GiftMoney = 1,
             };
-            List<GameGiftPO> a = new List<GameGiftPO> { };
+            List<GameGiftPO> a = [];
             var updators = new Dictionary<Expression<Func<GameGiftPO, object>>, string>
             {
                 {t=>t.GiftCount,"gift_count+values(gift_count)"},
