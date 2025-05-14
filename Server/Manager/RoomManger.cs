@@ -41,14 +41,14 @@ namespace WishServer.Manager
 
         public async Task SendMessageToRoom(PlatformEnum platform, string roomId, string message)
         {
-            Session session = WebSocketController.CLIENTID_SESION_DICT.Where(t => t.Value.RoomId == roomId).FirstOrDefault().Value;
+            Session session = WebSocketController.CLIENTID_SESION_DICT.Where(t => t.Value.Platform == platform && t.Value.RoomId == roomId).FirstOrDefault().Value;
             if (session == null)
             {
                 await _redis.GetSubscriber().PublishAsync(new RedisChannel($"game:ROOM_CHANNEL:${platform}:${roomId}", RedisChannel.PatternMode.Pattern), message);
             }
             else
             {
-                await WebSocketController.CLIENTID_SESION_DICT.Where(t => t.Value.RoomId == roomId).FirstOrDefault().Value.WebSocket.SendTextAsync(message);
+                await session.WebSocket.SendTextAsync(message);
             }
         }
     }

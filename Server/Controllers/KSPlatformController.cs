@@ -10,6 +10,8 @@ using WishServer.Model;
 using WishServer.Service.impl;
 using WishServer.Util;
 using Sunny.Framework.External.Client;
+using StackExchange.Redis;
+using WishServer.Service;
 
 namespace WishServer.Controllers
 {
@@ -19,11 +21,20 @@ namespace WishServer.Controllers
 
         private readonly ILogger<DYPlatformController> _logger;
         private readonly KSPlatformService _ksPlatformService;
+        private readonly RoomManager _roomManager;
+        private readonly IDatabase _redisDatabase;
 
-        public KSPlatformController(ILogger<DYPlatformController> logger, KSPlatformService ksPlatformService)
+        public KSPlatformController(
+            ILogger<DYPlatformController> logger,
+            KSPlatformService ksPlatformService,
+            RoomManager roomManager,
+            IDatabase redisDatabase
+            )
         {
             _logger = logger;
             _ksPlatformService = ksPlatformService;
+            _roomManager = roomManager;
+            _redisDatabase = redisDatabase;
         }
 
         [HttpGet("live/info")]
@@ -99,18 +110,26 @@ namespace WishServer.Controllers
                 default:
                     break;
             }
+            var setMsgSuccess = await _redisDatabase.StringSetAsync(((IMessageHandler)_ksPlatformService).GetMsgKey(msgId), 1, TimeSpan.FromHours(3), When.NotExists);
 
-            if (gameMessageDTO.Msgs.Count > 0)
+            if (!setMsgSuccess)
+            {
+                return await Task.FromResult(CommonResult<object>.Ok(new object()));
+            }
+
+            if (_ksPlatformService.GetAckMsgTypes().Contains(msgType))
             {
                 Dictionary<string, object> actData = new()
-                {
-                    {"uniqueMessageId",msgId},
-                    {"pushType",msgType },
-                    {"cpServerReceiveTime",DateTimeOffset.Now.ToUnixTimeSeconds()},
-                    {"cpClientReceiveTime",DateTimeOffset.Now.ToUnixTimeSeconds()},
-                };
-                await _ksPlatformService.Ack(gameCode,roomId, "cpClientReceive", actData);
+                    {
+                        {"uniqueMessageId",msgId},
+                        {"pushType",msgType },
+                        {"cpServerReceiveTime",DateTimeOffset.Now.ToUnixTimeSeconds()},
+                        {"cpClientReceiveTime",DateTimeOffset.Now.ToUnixTimeSeconds()},
+                    };
+                await _ksPlatformService.Ack(gameCode, roomId, "cpClientReceive", actData);
             }
+
+            await _roomManager.SendMessageToRoom(_ksPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDTO));
 
             return await Task.FromResult(CommonResult<object>.Ok(new object()));
         }

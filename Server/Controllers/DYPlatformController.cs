@@ -133,24 +133,23 @@ namespace WishServer.Controllers
                     default:
                         break;
                 }
-                if (gameMessageDTO.Msgs.Count > 0)
-                {
-                    await _dyPlatformService.Ack(gameCode, roomId, 1, [.. gameMessageDTO.Msgs.Select(t=>
-                    new Dictionary<string, object?>
-                    {
-                        { "msg_id", t.MsgId },
-                        { "msg_type", msgType },
-                        { "client_time", timestamp }
-                    })]);
-                }
             }
 
-            if (gameMessageDTO.Msgs.Count > 0)
+            if (_dyPlatformService.GetAckMsgTypes().Contains(msgType))
             {
-                gameMessageDTO.Msgs = gameMessageDTO.Msgs;
-                await _roomManager.SendMessageToRoom(_dyPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDTO));
+                List<Dictionary<string, object?>> ackData = [
+                   .. gameMessageDTO.Msgs.Select(t=>
+                        new Dictionary<string, object?>
+                        {
+                            { "msg_id", t.MsgId },
+                            { "msg_type", msgType },
+                            { "client_time", timestamp }
+                        })
+               ];
+                await _dyPlatformService.Ack(gameCode, roomId, 1, ackData);
             }
 
+            await _roomManager.SendMessageToRoom(_dyPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDTO));
             return await Task.FromResult(CommonResult<object>.Ok(new object()));
         }
 

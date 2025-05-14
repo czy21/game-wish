@@ -210,7 +210,7 @@ namespace WishServer.Service.impl
 
         public HashSet<string> GetAckMsgTypes()
         {
-            return ["live_gift"];
+            return [.. GetArrMsgTypes()];
         }
     }
 }

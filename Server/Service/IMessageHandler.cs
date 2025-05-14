@@ -16,6 +16,11 @@ namespace WishServer.Service
             return $"game:${GetPlatform()}:ROOM:${roomId}";
         }
 
+        public string GetMsgKey(string msgId)
+        {
+            return $"game:${GetPlatform()}:MSG:${msgId}";
+        }
+
         Task Init(Session session);
         Task Exit(Session session);
     }
