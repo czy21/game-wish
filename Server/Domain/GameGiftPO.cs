@@ -4,25 +4,25 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace WishServer.Domain
 {
     [Table("game_gift")]
-    public class GameGiftPO : BaseEntity<long?, string?>
+    public class GameGiftPO : BaseEntity<long?, string>
     {
         [Column("game_id")]
         public long? GameId { get; set; }
         /// 平台
         [Column("platform")]
-        public string? Platform { get; set; }
+        public string Platform { get; set; }
         /// 房间id
         [Column("room_id")]
-        public string? RoomId { get; set; }
+        public string RoomId { get; set; }
         /// 回合id
         [Column("round_id")]
         public long? RoundId { get; set; }
         /// 用户id
         [Column("user_id")]
-        public string? UserId { get; set; }
+        public string UserId { get; set; }
         /// 礼物id
         [Column("gift_id")]
-        public string? GiftId { get; set; }
+        public string GiftId { get; set; }
         /// 礼物数量
         [Column("gift_count")]
         public long? GiftCount { get; set; }

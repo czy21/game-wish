@@ -7,7 +7,7 @@ namespace WishServer.Service
     {
         Task<List<GameRoomDTO>> AggRoom(string roomId);
 
-        Task<GameRoomPO?> GetOne(string roomId);
+        Task<GameRoomPO> GetOne(string roomId);
 
         Task SaveOne();
     }

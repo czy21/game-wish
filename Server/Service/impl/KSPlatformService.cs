@@ -46,11 +46,11 @@ namespace WishServer.Service.impl
 
         public async Task<string> GetAccessToken(string gameCode)
         {
-            string? accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
+            string accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
             if (string.IsNullOrEmpty(accessToken))
             {
 
-                GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+                GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
                 if (gameApp == null)
                 {
                     throw new Exception($"GameApp {gameCode} ${GetPlatform()} not exist");
@@ -84,14 +84,14 @@ namespace WishServer.Service.impl
 
         public async Task<string> SignatureRecive(string gameCode, string rawBody)
         {
-            GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+            GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
             return KSUtil.SignatureReceive(rawBody, gameApp?.GameApp.AppSecret ?? string.Empty);
         }
 
 
         public async Task Ack(string gameCode, string roomId, string ackType, Dictionary<string, object> data)
         {
-            GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+            GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
             string accessToken = await this.GetAccessToken(gameCode);
             var param = new Dictionary<string, object>()
                 {
@@ -119,7 +119,7 @@ namespace WishServer.Service.impl
         {
             _logger.LogInformation("KS Bind Check Task is running.");
             _ = new Timer(
-                async (object? state) =>
+                async (object state) =>
                 {
                     foreach (var k in ROOM_SESSION_DICT.Keys)
                     {
@@ -130,7 +130,7 @@ namespace WishServer.Service.impl
             return Task.CompletedTask;
         }
 
-        public Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param)
+        public Task SendMessages(string roomId, string msgType, List<Dictionary<string, object>> param)
         {
             return Task.CompletedTask;
         }

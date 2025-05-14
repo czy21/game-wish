@@ -109,20 +109,20 @@ namespace WishServer.Controllers
             _logger.LogInformation($"Client {session.ClientId} disconnected. Total clients: {CLIENTID_SESION_DICT.Count}");
         }
 
-        public async Task HandleMessage(IMessageHandler? messageHandler, Session session, string message)
+        public async Task HandleMessage(IMessageHandler messageHandler, Session session, string message)
         {
             if (string.IsNullOrEmpty(message) || messageHandler == null)
             {
                 return;
             }
 
-            MessageDTO? messageDTO = JsonUtil.Deserialize<MessageDTO>(message);
+            MessageDTO messageDTO = JsonUtil.Deserialize<MessageDTO>(message);
             if (messageDTO == null)
             {
                 return;
             }
 
-            MethodInfo? methodInfo = messageHandler.GetType()
+            MethodInfo methodInfo = messageHandler.GetType()
                 .GetMethods()
                 .Where(m => m.GetCustomAttributes().Any(a => a is OnMessage attr && attr.GetKind() == messageDTO.Kind))
                 .FirstOrDefault();
@@ -130,7 +130,7 @@ namespace WishServer.Controllers
             if (methodInfo != null)
             {
                 ParameterInfo[] methodParamInfos = methodInfo.GetParameters();
-                object?[] methodParams = new object[methodParamInfos.Length];
+                object[] methodParams = new object[methodParamInfos.Length];
                 for (int i = 0; i < methodParamInfos.Length; i++)
                 {
                     ParameterInfo parameterInfo = methodParamInfos[i];
@@ -147,7 +147,7 @@ namespace WishServer.Controllers
                     }
                     if (typeof(IMessage).IsAssignableFrom(paramType))
                     {
-                        IMessage? messageObj = (IMessage?)JsonUtil.Deserialize(messageDTO.Data, paramType);
+                        IMessage messageObj = (IMessage)JsonUtil.Deserialize(messageDTO.Data, paramType);
                         if (messageObj == null) return;
 
                         messageObj.Kind = messageDTO.Kind;

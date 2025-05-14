@@ -6,7 +6,7 @@ namespace WishServer.Repository
 {
     public interface IGameRoomRepository : IRepositoryBase<long?, GameRoomPO>
     {
-        Task<GameRoomDTO?> AggRoom(string roomId);
+        Task<GameRoomDTO> AggRoom(string roomId);
 
         Task<List<GameRoomDTO>> AggRoom1(string roomId);
     }

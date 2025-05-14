@@ -93,7 +93,7 @@ namespace WishServer.Controllers
 
             if (isObjMsgTypes.Contains(msgType))
             {
-                JsonObject? jsonObj = JsonUtil.Deserialize<JsonObject>(rawBody);
+                JsonObject jsonObj = JsonUtil.Deserialize<JsonObject>(rawBody);
                 if (jsonObj == null)
                 {
                     return await Task.FromResult(CommonResult<object>.Ok(new object()));
@@ -111,7 +111,7 @@ namespace WishServer.Controllers
 
             if (isArrMsgTypes.Contains(msgType))
             {
-                JsonArray? jsonArr = JsonUtil.Deserialize<JsonArray>(rawBody);
+                JsonArray jsonArr = JsonUtil.Deserialize<JsonArray>(rawBody);
                 if (jsonArr == null)
                 {
                     return await Task.FromResult(CommonResult<object>.Ok(new object()));
@@ -137,9 +137,9 @@ namespace WishServer.Controllers
 
             if (_dyPlatformService.GetAckMsgTypes().Contains(msgType))
             {
-                List<Dictionary<string, object?>> ackData = [
+                List<Dictionary<string, object>> ackData = [
                    .. gameMessageDTO.Msgs.Select(t=>
-                        new Dictionary<string, object?>
+                        new Dictionary<string, object>
                         {
                             { "msg_id", t.MsgId },
                             { "msg_type", msgType },

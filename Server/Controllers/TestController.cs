@@ -63,13 +63,13 @@ namespace WishServer.Controllers
         }
 
         [HttpGet("db2")]
-        public async Task<GameRoomPO?> test2([FromQuery] string roomId)
+        public async Task<GameRoomPO> test2([FromQuery] string roomId)
         {
             return await _gameRoomService.GetOne(roomId);
         }
 
         [HttpGet("db3")]
-        public async Task<GameRoomPO?> test3([FromQuery] string roomId, [FromQuery] string userId)
+        public async Task<GameRoomPO> test3([FromQuery] string roomId, [FromQuery] string userId)
         {
             await _gameRoomService.SaveOne();
             return await Task.FromResult(GameRoomPO.Empty());

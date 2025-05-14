@@ -13,7 +13,7 @@ namespace WishServer.Repository.impl
         AppDbContext _dbContext = dbContext;
         IMapper _mapper = mapper;
 
-        public async Task<GameRoomDTO?> AggRoom(string roomId)
+        public async Task<GameRoomDTO> AggRoom(string roomId)
         {
             var query = from r in _dbContext.GameRooms
                         join d in _dbContext.GameRounds

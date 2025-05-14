@@ -6,6 +6,6 @@ namespace WishServer.Repository
 {
     public interface IGameAppRepository : IRepositoryBase<long?, GameAppPO>
     {
-        Task<GameAppBO?> SelectOneByPlatformAndGameCode(string platform,string gameCode);
+        Task<GameAppBO> SelectOneByPlatformAndGameCode(string platform,string gameCode);
     }
 }

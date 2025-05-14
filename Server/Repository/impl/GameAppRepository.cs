@@ -8,7 +8,7 @@ namespace WishServer.Repository.impl
     public class GameAppRepository(AppDbContext dbContext) : RepositoryBase<long?, GameAppPO>(dbContext), IGameAppRepository
     {
         private readonly AppDbContext _dbContext = dbContext;
-        public async Task<GameAppBO?> SelectOneByPlatformAndGameCode(string platform, string gameCode)
+        public async Task<GameAppBO> SelectOneByPlatformAndGameCode(string platform, string gameCode)
         {
             var ret = from g in _dbContext.Games
                       join ga in _dbContext.GameApps on g.Id equals ga.GameId

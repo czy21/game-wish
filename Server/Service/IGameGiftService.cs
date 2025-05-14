@@ -5,6 +5,6 @@ namespace WishServer.Service
     public interface IGameGiftService : IServiceBase
     {
         Task UpSert();
-        Task<GameGiftPO?> GetOne(string roomId,string userId);
+        Task<GameGiftPO> GetOne(string roomId,string userId);
     }
 }

@@ -19,7 +19,7 @@ namespace WishServer.Service.impl
             return await _gameRoomRepository.AggRoom1(roomId);
         }
 
-        public async Task<GameRoomPO?> GetOne(string roomId)
+        public async Task<GameRoomPO> GetOne(string roomId)
         {
             return await _gameRoomRepository.GetDbSet().Where(t => t.RoomId == roomId).FirstOrDefaultAsync();
         }
@@ -33,7 +33,7 @@ namespace WishServer.Service.impl
             p.RoomId = "1";
             p.AnchorId = "1";
             p.AvatarUrl = "haha";
-            await _gameRoomRepository.UpsertAsync(p, new Dictionary<System.Linq.Expressions.Expression<Func<GameRoomPO, object?>>, string> {
+            await _gameRoomRepository.UpsertAsync(p, new Dictionary<System.Linq.Expressions.Expression<Func<GameRoomPO, object>>, string> {
                 {t=>t.AvatarUrl,"values(avatar_url)" }
             });
 

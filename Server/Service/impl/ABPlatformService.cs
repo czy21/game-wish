@@ -53,7 +53,7 @@ namespace WishServer.Service.impl
             return Task.FromResult("");
         }
 
-        public async Task SendMessages(string? roomId, string? msgType, List<Dictionary<string, object>> param)
+        public async Task SendMessages(string roomId, string msgType, List<Dictionary<string, object>> param)
         {
             if (roomId == null || param == null)
             {
@@ -63,7 +63,7 @@ namespace WishServer.Service.impl
             if (ROOM_SESSION_DICT.TryGetValue(roomId, out var roomSession))
             {
                 await roomSession.Session.WebSocket.SendJsonAsnyc(
-                    new Dictionary<string, object?>()
+                    new Dictionary<string, object>()
                     {
                         ["msgType"] = msgType,
                         ["msg"] = param

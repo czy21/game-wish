@@ -67,7 +67,7 @@ namespace WishServer.Controllers
             // 3. 重置流位置
             Request.Body.Position = 0;
 
-            JsonObject? jsonObj = JsonUtil.Deserialize<JsonObject>(rawBody);
+            JsonObject jsonObj = JsonUtil.Deserialize<JsonObject>(rawBody);
 
             string msgType = jsonObj?["data"]?.AsValue()["push_type"]?.ToString() ?? string.Empty;
 

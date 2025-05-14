@@ -16,7 +16,7 @@ namespace WishServer.Service.impl
             _gameGiftRepository = gameGiftRepository;
         }
 
-        public async Task<GameGiftPO?> GetOne(string roomId, string userId)
+        public async Task<GameGiftPO> GetOne(string roomId, string userId)
         {
             return await _gameGiftRepository.GetDbSet().Where(t=> roomId == t.RoomId && userId.Equals(t.UserId)).FirstOrDefaultAsync();
         }
@@ -35,7 +35,7 @@ namespace WishServer.Service.impl
                 GiftMoney = 1,
             };
             List<GameGiftPO> a = new List<GameGiftPO> { };
-            var updators = new Dictionary<Expression<Func<GameGiftPO, object?>>, string>
+            var updators = new Dictionary<Expression<Func<GameGiftPO, object>>, string>
             {
                 {t=>t.GiftCount,"gift_count+values(gift_count)"},
                 {t=>t.GiftMoney,"gift_money+values(gift_money)"}

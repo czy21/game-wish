@@ -55,10 +55,10 @@ namespace WishServer.Service.impl
 
         public async Task<string> GetAccessToken(string gameCode)
         {
-            string? accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
+            string accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
             if (string.IsNullOrEmpty(accessToken))
             {
-                GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+                GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
                 if (gameApp == null)
                 {
                     throw new Exception($"GameApp {gameCode} ${GetPlatform()} not exist");
@@ -81,7 +81,7 @@ namespace WishServer.Service.impl
 
         public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string token)
         {
-            string? accessToken = await GetAccessToken(gameCode);
+            string accessToken = await GetAccessToken(gameCode);
 
             DYLiveInfoReq param = new() { token = token };
 
@@ -89,7 +89,7 @@ namespace WishServer.Service.impl
             GameRoomDTO grDTO = new();
             if (res.data?.info?.room_id != null)
             {
-                GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+                GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
                 grDTO = new GameRoomDTO()
                 {
                     Game = gameApp?.Game,
@@ -119,7 +119,7 @@ namespace WishServer.Service.impl
 
         public async Task<string> SignatureReceive(string gameCode, Dictionary<string, object> headers, string rawBody)
         {
-            GameAppBO? gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
+            GameAppBO gameApp = await _gameAppRepository.SelectOneByPlatformAndGameCode(GetPlatform().ToString(), gameCode);
             return DYUtil.SignatureReceive(headers, rawBody, gameApp?.GameApp.AppSecretPush ?? string.Empty);
         }
 
@@ -127,7 +127,7 @@ namespace WishServer.Service.impl
         {
             _logger.LogInformation("DY Push Check Task is running.");
             _ = new Timer(
-                async (object? state) =>
+                async (object state) =>
                 {
                     foreach (var k in ROOM_SESSION_DICT.Keys)
                     {
@@ -148,7 +148,7 @@ namespace WishServer.Service.impl
             DYRoomSession roomSession = ROOM_SESSION_DICT[roomId];
             foreach (var t in roomSession.Tasks.Where(t => t.TaskStatus != "SUCCESS"))
             {
-                string? accessToken = await GetAccessToken(roomSession.Session.GameCode);
+                string accessToken = await GetAccessToken(roomSession.Session.GameCode);
                 DYLiveDataTaskRes taskRes = await _dYClient.StartTaskPush(new()
                 {
                     appid = _config.Platform.DY.OAuth.AppId,
@@ -168,7 +168,7 @@ namespace WishServer.Service.impl
             var removeRooms = ROOM_SESSION_DICT.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
             foreach (var r in removeRooms)
             {
-                string? accessToken = await GetAccessToken(r.Value.Session.GameCode);
+                string accessToken = await GetAccessToken(r.Value.Session.GameCode);
                 foreach (var t in r.Value.Tasks)
                 {
                     await _dYClient.StopTaskPush(new()
@@ -182,7 +182,7 @@ namespace WishServer.Service.impl
             }
         }
 
-        public async Task Ack(string gameCode, string roomId, int ackType, List<Dictionary<string, object?>> data)
+        public async Task Ack(string gameCode, string roomId, int ackType, List<Dictionary<string, object>> data)
         {
             string accessToken = await GetAccessToken(gameCode);
             await _dYClient.Ack(new DYLiveDataAckReq()
