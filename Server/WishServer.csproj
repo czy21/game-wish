@@ -1,23 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    
-    <ImplicitUsings>enable</ImplicitUsings>
-    <NoWarn>CS8618;</NoWarn>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
 
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
-    <PublishDir>$(SolutionDir)build\</PublishDir>
-    <AssemblyName>api</AssemblyName>
-  </PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <NoWarn>CS8618;</NoWarn>
 
-  <ItemGroup>
-    <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Core\Sunny.Framework.Core.csproj" />
-    <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.DB\Sunny.Framework.DB.csproj" />
-    <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Cache\Sunny.Framework.Cache.csproj" />
-    <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Web\Sunny.Framework.Web.csproj" />
-    <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.External\Sunny.Framework.External.csproj" />
-  </ItemGroup>
+        <PublishSingleFile>true</PublishSingleFile>
+        <SelfContained>false</SelfContained>
+        <PublishDir>$(SolutionDir)build\</PublishDir>
+        <AssemblyName>api</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Core\Sunny.Framework.Core.csproj"/>
+        <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.DB\Sunny.Framework.DB.csproj"/>
+        <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Cache\Sunny.Framework.Cache.csproj"/>
+        <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.Web\Sunny.Framework.Web.csproj"/>
+        <ProjectReference Include="..\sunny-cloud\global\Sunny.Framework\Sunny.Framework.External\Sunny.Framework.External.csproj"/>
+    </ItemGroup>
 
 </Project>

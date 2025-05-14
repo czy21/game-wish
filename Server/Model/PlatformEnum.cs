@@ -1,9 +1,8 @@
-﻿namespace WishServer.Model
+﻿namespace WishServer.Model;
+
+public enum PlatformEnum
 {
-    public enum PlatformEnum
-    {
-        AB, // 开发
-        DY, // 抖音
-        KS, // 快手
-    }
+    AB, // 开发
+    DY, // 抖音
+    KS // 快手
 }

@@ -1,7 +1,6 @@
-﻿namespace WishServer.Service
+﻿namespace WishServer.Service;
+
+public interface IGameUserService : IServiceBase
 {
-    public interface IGameUserService : IServiceBase
-    {
-        Task UpSert();
-    }
+    Task UpSert();
 }

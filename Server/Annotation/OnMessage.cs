@@ -1,17 +1,19 @@
 ﻿using WishServer.Model;
 
-namespace WishServer.Annotation
+namespace WishServer.Annotation;
+
+[AttributeUsage(AttributeTargets.Method)]
+public class OnMessage : Attribute
 {
-    [AttributeUsage(AttributeTargets.Method)]
-    public class OnMessage : Attribute
+    private readonly MessageKind Kind;
+
+    public OnMessage(MessageKind kind)
     {
-        private MessageKind Kind;
+        Kind = kind;
+    }
 
-        public OnMessage(MessageKind kind)
-        {
-            Kind = kind;
-        }
-
-        public MessageKind GetKind() => Kind;
+    public MessageKind GetKind()
+    {
+        return Kind;
     }
 }

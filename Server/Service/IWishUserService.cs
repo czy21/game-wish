@@ -1,7 +1,6 @@
-﻿namespace WishServer.Service
+﻿namespace WishServer.Service;
+
+public interface IWishUserService : IServiceBase
 {
-    public interface IWishUserService : IServiceBase
-    {
-        Task TestTransaction(long id, bool error);
-    }
+    Task TestTransaction(long id, bool error);
 }

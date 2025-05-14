@@ -1,6 +1,5 @@
-﻿namespace WishServer.Service
+﻿namespace WishServer.Service;
+
+public interface IServiceBase
 {
-    public interface IServiceBase
-    {
-    }
 }

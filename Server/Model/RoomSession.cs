@@ -1,7 +1,6 @@
-﻿namespace WishServer.Model
+﻿namespace WishServer.Model;
+
+public class RoomSession
 {
-    public class RoomSession
-    {
-        public Session Session { get; set; }
-    }
+    public Session Session { get; set; }
 }

@@ -1,10 +1,9 @@
 ﻿using WishServer.Domain;
 
-namespace WishServer.Service
+namespace WishServer.Service;
+
+public interface IGameGiftService : IServiceBase
 {
-    public interface IGameGiftService : IServiceBase
-    {
-        Task UpSert();
-        Task<GameGiftPO> GetOne(string roomId,string userId);
-    }
+    Task UpSert();
+    Task<GameGiftPO> GetOne(string roomId, string userId);
 }

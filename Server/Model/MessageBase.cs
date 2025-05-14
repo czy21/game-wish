@@ -1,7 +1,6 @@
-﻿namespace WishServer.Model
+﻿namespace WishServer.Model;
+
+public class MessageBase : IMessage
 {
-    public class MessageBase : IMessage
-    {
-        public MessageKind Kind { get; set; }
-    }
+    public MessageKind Kind { get; set; }
 }

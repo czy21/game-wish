@@ -1,31 +1,31 @@
-﻿using Sunny.Framework.Core.Model;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Sunny.Framework.Core.Model;
 
-namespace WishServer.Domain
+namespace WishServer.Domain;
+
+[Table("game")]
+public class GamePO : BaseEntity<long?, string>
 {
-    [Table("game")]
-    public class GamePO : BaseEntity<long?, string>
-    {
-        /// 编码
-        [Column("code")]
-        public string Code { get; set; }
-        /// 名称
-        [Column("name")]
-        public string Name { get; set; }
+    /// 编码
+    [Column("code")]
+    public string Code { get; set; }
 
-        public static GamePO Empty()
+    /// 名称
+    [Column("name")]
+    public string Name { get; set; }
+
+    public static GamePO Empty()
+    {
+        return new GamePO
         {
-            return new ()
-            {
-                Id = default(long),
-                Code = string.Empty,
-                Name = string.Empty,
-                CreateTime = default(DateTime),
-                CreateUser = string.Empty,
-                UpdateTime = default(DateTime),
-                UpdateUser = string.Empty,
-                Deleted = default(bool),
-            };
-        }
+            Id = default(long),
+            Code = string.Empty,
+            Name = string.Empty,
+            CreateTime = default(DateTime),
+            CreateUser = string.Empty,
+            UpdateTime = default(DateTime),
+            UpdateUser = string.Empty,
+            Deleted = default
+        };
     }
 }

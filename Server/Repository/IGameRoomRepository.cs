@@ -2,12 +2,11 @@
 using WishServer.Domain;
 using WishServer.Model.DTO;
 
-namespace WishServer.Repository
-{
-    public interface IGameRoomRepository : IRepositoryBase<long?, GameRoomPO>
-    {
-        Task<GameRoomDTO> AggRoom(string roomId);
+namespace WishServer.Repository;
 
-        Task<List<GameRoomDTO>> AggRoom1(string roomId);
-    }
+public interface IGameRoomRepository : IRepositoryBase<long?, GameRoomPO>
+{
+    Task<GameRoomDTO> AggRoom(string roomId);
+
+    Task<List<GameRoomDTO>> AggRoom1(string roomId);
 }

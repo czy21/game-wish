@@ -1,4 +1,5 @@
 using Autofac;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Refit;
 using StackExchange.Redis;
@@ -19,7 +20,7 @@ builder.Services.Configure<AppSetting>(builder.Configuration.Bind);
 
 builder.Host.ConfigureContainer<ContainerBuilder>(b => { b.RegisterModule<AppRegister>(); });
 
-Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 builder.Services.AddAutoMapper(typeof(MapperProfile));
 
