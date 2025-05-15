@@ -153,18 +153,21 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler, IHoste
     public async Task<string> SignatureReceive(string gameCode, Dictionary<string, object> headers, string rawBody)
     {
         var gameApp = await GetGameApp(gameCode);
-        return DYUtil.SignatureReceive(headers, rawBody, gameApp?.GameApp.AppSecretPush ?? string.Empty);
+        return DYUtil.SignatureReceive(headers, rawBody, gameApp.GameApp.AppSecretPush);
     }
 
     public async Task Ack(string gameCode, string roomId, int ackType, List<Dictionary<string, object>> data)
     {
         var accessToken = await GetAccessToken(gameCode);
-        await _dYClient.Ack(new DYLiveDataAckReq
+        var gameApp = await GetGameApp(gameCode);
+        var param = new DYLiveDataAckReq
         {
+            app_id = gameApp.GameApp.AppId,
             room_id = roomId,
             ack_type = ackType,
             data = JsonUtil.Serialize(data)
-        }, accessToken);
+        };
+        await _dYClient.Ack(param, accessToken);
     }
 
     public static HashSet<string> GetObjMsgTypes()
