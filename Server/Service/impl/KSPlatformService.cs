@@ -36,6 +36,18 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
         return PlatformEnum.KS;
     }
 
+    private async Task<string> SignatureRequest(string gameCode, Dictionary<string, object> param)
+    {
+        var gameApp = await GetGameApp(gameCode);
+        return await Task.FromResult(KSUtil.SignatureRequest(param, gameApp.GameApp.AppSecret));
+    }
+    
+    public async Task<string> SignatureReceive(string gameCode, string rawBody)
+    {
+        var gameApp = await GetGameApp(gameCode);
+        return KSUtil.SignatureReceive(rawBody, gameApp?.GameApp.AppSecret);
+    }
+    
     public override async Task<string> GetAccessToken(string gameCode)
     {
         string accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
@@ -55,13 +67,18 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
         return accessToken;
     }
 
+    public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string roomId)
+    {
+        return await Task.FromResult(new GameRoomDTO());
+    }
+    
     public override async Task Init(Session session)
     {
         _roomSessionDict.AddOrUpdate(session.RoomId, new KSRoomSession { Session = session }, (k, v) => v);
         await DoRoomTask(session.RoomId);
     }
 
-    public override async Task DoRoomTask(string roomId)
+    public async Task DoRoomTask(string roomId)
     {
         var roomSession = _roomSessionDict[roomId];
         if (roomSession.Bind.TaskStatus != "SUCCESS")
@@ -101,23 +118,6 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
         }
     }
 
-    private async Task<string> SignatureRequest(string gameCode, Dictionary<string, object> param)
-    {
-        var gameApp = await GetGameApp(gameCode);
-        return await Task.FromResult(KSUtil.SignatureRequest(param, gameApp.GameApp.AppSecret));
-    }
-
-    public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string roomId)
-    {
-        return await Task.FromResult(new GameRoomDTO());
-    }
-
-    public async Task<string> SignatureReceive(string gameCode, string rawBody)
-    {
-        var gameApp = await GetGameApp(gameCode);
-        return KSUtil.SignatureReceive(rawBody, gameApp?.GameApp.AppSecret);
-    }
-
     public async Task Ack(string gameCode, string roomId, string ackType, Dictionary<string, object> data)
     {
         var accessToken = await GetAccessToken(gameCode);
@@ -133,16 +133,12 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
         await _ksClient.Ack(gameApp?.GameApp?.AppId, accessToken, data);
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task DoPeriodTask()
     {
-        _logger.LogInformation("KS Bind Check Task is running.");
-        _ = new Timer(
-            async state =>
-            {
-                foreach (var k in _roomSessionDict.Keys) await DoRoomTask(k);
-            },
-            null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
-        return Task.CompletedTask;
+        foreach (var k in _roomSessionDict.Keys)
+        {
+            await DoRoomTask(k);
+        }
     }
 
     public HashSet<string> GetPushMsgTypes()

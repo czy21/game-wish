@@ -18,8 +18,6 @@ public interface IMessageHandler
         return $"game:{GetPlatform()}:ROOM:{roomId}";
     }
 
-    Task DoRoomTask(string roomId);
-
     public string GetMsgKey(string msgId)
     {
         return $"game:{GetPlatform()}:MSG:{msgId}";

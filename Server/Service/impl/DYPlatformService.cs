@@ -11,7 +11,7 @@ using WishServer.Util;
 
 namespace WishServer.Service.impl;
 
-public class DYPlatformService : AbstractMessageHandler, IMessageHandler, IHostedService
+public class DYPlatformService : AbstractMessageHandler, IMessageHandler
 {
     private readonly IDYClient _dYClient;
     private readonly IDYOAuthClient _dyOAuthClient;
@@ -34,28 +34,17 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler, IHoste
         _dYClient = dyClient;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("DY Push Check Task is running.");
-        _ = new Timer(
-            async state =>
-            {
-                foreach (var k in _roomSessionDict.Keys) await DoRoomTask(k);
-            },
-            null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
-        return Task.CompletedTask;
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
-
     public override PlatformEnum GetPlatform()
     {
         return PlatformEnum.DY;
     }
 
+    public async Task<string> SignatureReceive(string gameCode, Dictionary<string, object> headers, string rawBody)
+    {
+        var gameApp = await GetGameApp(gameCode);
+        return DYUtil.SignatureReceive(headers, rawBody, gameApp.GameApp.AppSecretPush);
+    }
+    
     public override async Task<string> GetAccessToken(string gameCode)
     {
         string accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
@@ -76,13 +65,41 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler, IHoste
         return accessToken;
     }
 
+    public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string token)
+    {
+        var accessToken = await GetAccessToken(gameCode);
+
+        DYLiveInfoReq param = new() { token = token };
+
+        var res = await _dYClient.GetLiveInfo(param, accessToken);
+        GameRoomDTO grDto = new();
+        if (res.data?.info?.room_id != null)
+        {
+            var gameApp = await GetGameApp(gameCode);
+            grDto = new GameRoomDTO
+            {
+                Game = gameApp?.Game,
+                GameApp = gameApp?.GameApp,
+                RoomId = res.data?.info?.room_id.ToString(),
+                AnchorId = res.data?.info?.anchor_open_id,
+                AvatarUrl = res.data?.info?.avatar_url,
+                Nickname = res.data?.info?.nick_name
+            };
+            await _redisDatabase.StringSetAsync(((IMessageHandler)this).GetRoomKey(grDto.RoomId), JsonUtil.Serialize(grDto), TimeSpan.FromDays(1));
+        }
+
+        grDto.Game = null;
+        grDto.GameApp = null;
+        return await Task.FromResult(grDto);
+    }
+    
     public override async Task Init(Session session)
     {
         _roomSessionDict.AddOrUpdate(session.RoomId, new DYRoomSession { Session = session }, (k, v) => v);
         await DoRoomTask(session.RoomId);
     }
 
-    public override async Task DoRoomTask(string roomId)
+    public async Task DoRoomTask(string roomId)
     {
         var roomSession = _roomSessionDict[roomId];
         foreach (var t in roomSession.Tasks.Where(t => t.TaskStatus != "SUCCESS"))
@@ -122,40 +139,6 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler, IHoste
         }
     }
 
-    public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string token)
-    {
-        var accessToken = await GetAccessToken(gameCode);
-
-        DYLiveInfoReq param = new() { token = token };
-
-        var res = await _dYClient.GetLiveInfo(param, accessToken);
-        GameRoomDTO grDto = new();
-        if (res.data?.info?.room_id != null)
-        {
-            var gameApp = await GetGameApp(gameCode);
-            grDto = new GameRoomDTO
-            {
-                Game = gameApp?.Game,
-                GameApp = gameApp?.GameApp,
-                RoomId = res.data?.info?.room_id.ToString(),
-                AnchorId = res.data?.info?.anchor_open_id,
-                AvatarUrl = res.data?.info?.avatar_url,
-                Nickname = res.data?.info?.nick_name
-            };
-            await _redisDatabase.StringSetAsync(((IMessageHandler)this).GetRoomKey(grDto.RoomId), JsonUtil.Serialize(grDto), TimeSpan.FromDays(1));
-        }
-
-        grDto.Game = null;
-        grDto.GameApp = null;
-        return await Task.FromResult(grDto);
-    }
-
-    public async Task<string> SignatureReceive(string gameCode, Dictionary<string, object> headers, string rawBody)
-    {
-        var gameApp = await GetGameApp(gameCode);
-        return DYUtil.SignatureReceive(headers, rawBody, gameApp.GameApp.AppSecretPush);
-    }
-
     public async Task Ack(string gameCode, string roomId, int ackType, List<Dictionary<string, object>> data)
     {
         var accessToken = await GetAccessToken(gameCode);
@@ -169,12 +152,20 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler, IHoste
         };
         await _dYClient.Ack(param, accessToken);
     }
-
+    
+    protected override async Task DoPeriodTask()
+    {
+        foreach (var k in _roomSessionDict.Keys)
+        {
+            await DoRoomTask(k);
+        }
+    }
+    
     public static HashSet<string> GetObjMsgTypes()
     {
         return ["user_group_push"];
     }
-
+    
     public static HashSet<string> GetArrMsgTypes()
     {
         return ["live_comment", "live_like", "live_gift"];

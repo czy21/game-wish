@@ -18,6 +18,7 @@ done;
 export param_project_root="$(pwd)/Server"
 export param_release_name="${target_name}"
 export param_code_type="dotnet"
+export param_app_args="--LogRules=File --Logging:LogLevel:Default=Debug"
 
 export SSH_HOST=${target_host}
 

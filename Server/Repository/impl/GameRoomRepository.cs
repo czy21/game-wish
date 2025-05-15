@@ -10,13 +10,10 @@ namespace WishServer.Repository.impl;
 
 public class GameRoomRepository(AppDbContext dbContext, IMapper mapper) : RepositoryBase<long?, GameRoomPO>(dbContext), IGameRoomRepository
 {
-    private readonly AppDbContext _dbContext = dbContext;
-    private readonly IMapper _mapper = mapper;
-
     public async Task<GameRoomDTO> AggRoom(string roomId)
     {
-        var query = from r in _dbContext.GameRooms
-            join d in _dbContext.GameRounds
+        var query = from r in dbContext.GameRooms
+            join d in dbContext.GameRounds
                 on new { r.GameId, r.RoomId } equals new { d.GameId, d.RoomId } into tempJoin
             from rightItem in tempJoin.DefaultIfEmpty()
             where r.RoomId == roomId
@@ -33,42 +30,40 @@ public class GameRoomRepository(AppDbContext dbContext, IMapper mapper) : Reposi
 
     public async Task<List<GameRoomDTO>> AggRoom1(string roomId)
     {
-        //var a = from room in _dbContext.GameRooms
-        //        join round in _dbContext.GameRounds
-        //          on room.RoomId equals round.RoomId into rounds
-        //        select new GameRoomDTO
-        //        {
-        //            RoomId = room.RoomId,
-        //            GameId = room.GameId,
-        //            Rounds = rounds.Select(t => new GameRoundPO { RoundId = t.RoundId }).ToList(),
-        //            RoundCount = rounds.Count()
-        //        };
-        //return await a.ToListAsync();
-        return await AggRom2(roomId);
+        var a = from room in dbContext.GameRooms
+                join round in dbContext.GameRounds
+                  on room.RoomId equals round.RoomId into rounds
+                select new GameRoomDTO
+                {
+                    RoomId = room.RoomId,
+                    GameId = room.GameId,
+                    Rounds = rounds.Select(t => new GameRoundPO { RoundId = t.RoundId }).ToList(),
+                    RoundCount = rounds.Count()
+                };
+        return await a.ToListAsync();
     }
 
     public async Task<List<GameRoomDTO>> AggRom2(string roomId)
     {
-        var conn = _dbContext.Database.GetDbConnection();
+        var conn = dbContext.Database.GetDbConnection();
 
         if (conn.State != ConnectionState.Open)
             await conn.OpenAsync();
 
         var roomDict = new Dictionary<string, GameRoomDTO>();
 
-        var sql = @"
-select
-  a.*,
-  b.*
-from game_room a
-left join game_round b on a.room_id = b.room_id
-order by a.room_id,b.round_id
-";
+        var sql = @"select
+                      a.*,
+                      b.*
+                    from game_room a
+                    left join game_round b on a.room_id = b.room_id
+                    order by a.room_id,b.round_id
+        ";
         _ = await conn.QueryAsync<GameRoomPO, GameRoundPO, GameRoomDTO>(sql, (room, round) =>
         {
             if (!roomDict.TryGetValue(room.RoomId ?? "", out var current))
             {
-                current = _mapper.Map<GameRoomDTO>(room);
+                current = mapper.Map<GameRoomDTO>(room);
                 current.Rounds = [];
                 roomDict.Add(room.RoomId ?? "", current);
             }
