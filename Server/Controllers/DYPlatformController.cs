@@ -110,15 +110,15 @@ public class DYPlatformController : Controller
             switch (msgType)
             {
                 case "live_comment":
-                    gameMessageDTO.MsgType = MessageKind.Live_Comment.ToString();
+                    gameMessageDTO.MsgType = nameof(MessageKind.Live_Comment);
                     gameMessageDTO.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyComment(t)).ToList());
                     break;
                 case "live_gift":
-                    gameMessageDTO.MsgType = MessageKind.Live_Gift.ToString();
+                    gameMessageDTO.MsgType = nameof(MessageKind.Live_Gift);
                     gameMessageDTO.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyGift(t)).ToList());
                     break;
                 case "live_like":
-                    gameMessageDTO.MsgType = MessageKind.Live_Like.ToString();
+                    gameMessageDTO.MsgType = nameof(MessageKind.Live_Like);
                     gameMessageDTO.Msgs.AddRange(jsonArr.Select(t => LiveMessageMapper.MapFromDyLike(t)).ToList());
                     break;
             }

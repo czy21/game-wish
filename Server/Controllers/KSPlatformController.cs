@@ -42,18 +42,18 @@ public class KSPlatformController : Controller
     }
 
     [HttpPost("test")]
-    public async Task<CommonResult<object>> Test([FromQuery(Name = "gameCode")] string gameCode)
+    public async Task<Dictionary<string, object>> Test([FromQuery(Name = "gameCode")] string gameCode)
     {
         return await OnMessage(gameCode);
     }
 
     [HttpPost("push")]
-    public async Task<CommonResult<object>> Push([FromQuery(Name = "gameCode")] string gameCode)
+    public async Task<Dictionary<string, object>> Push([FromQuery(Name = "gameCode")] string gameCode)
     {
         return await OnMessage(gameCode);
     }
 
-    public async Task<CommonResult<object>> OnMessage([FromQuery(Name = "gameCode")] string gameCode)
+    public async Task<Dictionary<string, object>> OnMessage([FromQuery(Name = "gameCode")] string gameCode)
     {
         // 1. 启用缓冲，允许多次读取
         Request.EnableBuffering();
@@ -73,7 +73,7 @@ public class KSPlatformController : Controller
         if (!validMsg)
         {
             HttpContext.Response.StatusCode = 403;
-            return await Task.FromResult(CommonResult<object>.Fail(HttpContext.Response.StatusCode, "请求验证失败"));
+            return await Task.FromResult(new Dictionary<string, object> { { "result", 403 }, { "errorMsg", "请求验证失败" } });
         }
 
         var msgId = jsonObj?["data"]?.AsValue()["unique_message_id"]?.ToString() ?? string.Empty;
@@ -83,7 +83,7 @@ public class KSPlatformController : Controller
 
         var payload = jsonObj?["payload"]?.AsArray() ?? [];
 
-        GameMessageDTO<LiveMessageDTOBase> gameMessageDTO = new()
+        GameMessageDTO<LiveMessageDTOBase> gameMessageDto = new()
         {
             MsgId = msgId,
             Platform = _ksPlatformService.GetPlatform().ToString(),
@@ -94,23 +94,22 @@ public class KSPlatformController : Controller
         switch (msgType)
         {
             case "liveComment":
-                gameMessageDTO.MsgType = MessageKind.Live_Comment.ToString();
-                gameMessageDTO.Msgs.AddRange(payload.Select(t => LiveMessageMapper.MapFromKsComment(t, timestamp)));
+                gameMessageDto.MsgType = nameof(MessageKind.Live_Comment);
+                gameMessageDto.Msgs.AddRange(payload.Select(t => LiveMessageMapper.MapFromKsComment(t, timestamp)));
                 break;
             case "liveLike":
-                gameMessageDTO.MsgType = MessageKind.Live_Like.ToString();
-                gameMessageDTO.Msgs.AddRange(payload.Select(t => LiveMessageMapper.MapFromKsLike(t, timestamp)));
+                gameMessageDto.MsgType = nameof(MessageKind.Live_Like);
+                gameMessageDto.Msgs.AddRange(payload.Select(t => LiveMessageMapper.MapFromKsLike(t, timestamp)));
                 break;
             case "giftSend":
-                gameMessageDTO.MsgType = MessageKind.Live_Gift.ToString();
-                gameMessageDTO.Msgs.AddRange(payload.Select(t => LiveMessageMapper.MapFromKsGift(t, timestamp)));
+                gameMessageDto.MsgType = nameof(MessageKind.Live_Gift);
+                gameMessageDto.Msgs.AddRange(payload.Select(t => LiveMessageMapper.MapFromKsGift(t, timestamp)));
                 break;
         }
 
-        var setMsgSuccess = await _redisDatabase.StringSetAsync(((IMessageHandler)_ksPlatformService).GetMsgKey(msgId), 1, TimeSpan.FromHours(3), When.NotExists);
-
-        if (!setMsgSuccess) return await Task.FromResult(CommonResult<object>.Ok(new object()));
-
+        var setMsgSuccess = await _redisDatabase.StringSetAsync(((IMessageHandler)_ksPlatformService).GetMsgKey(msgId), 1, TimeSpan.FromMinutes(10), When.NotExists);
+        if (!setMsgSuccess) return await Task.FromResult(new Dictionary<string, object> { { "result", 1 }, { "errorMsg", "" } });
+        
         if (KSPlatformService.GetAckMsgTypes().Contains(msgType))
         {
             Dictionary<string, object> actData = new()
@@ -123,9 +122,9 @@ public class KSPlatformController : Controller
             await _ksPlatformService.Ack(gameCode, roomId, "cpClientReceive", actData);
         }
 
-        await _roomManager.SendMessageToRoom(_ksPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDTO));
+        await _roomManager.SendMessageToRoom(_ksPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDto));
 
-        return await Task.FromResult(CommonResult<object>.Ok(new object()));
+        return await Task.FromResult(new Dictionary<string, object> { { "result", 1 }, { "errorMsg", "" } });
     }
 
     private async Task<bool> ValidateMessage(string gameCode, string msgType, string rawBody)
