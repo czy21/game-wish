@@ -44,25 +44,24 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
         var gameApp = await GetGameApp(gameCode);
         return DYUtil.SignatureReceive(headers, rawBody, gameApp.GameApp.AppSecretPush);
     }
-    
+
     public override async Task<string> GetAccessToken(string gameCode)
     {
-        string accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
-        if (!string.IsNullOrEmpty(accessToken)) return accessToken;
-
         var gameApp = await GetGameApp(gameCode);
 
-        DYAccessTokenReq req = new()
-        {
-            appid = gameApp.GameApp.AppId,
-            secret = gameApp.GameApp.AppSecret,
-            grant_type = "client_credential"
-        };
-
-        var res = await _dyOAuthClient.GetAccessToken(req);
-        if (res.data != null) accessToken = await _redisDatabase.StringSetAndGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode), res.data.access_token, TimeSpan.FromHours(1));
-
-        return accessToken;
+        return await GetCacheValue(((IMessageHandler)this).GetAccessTokenKey(gameCode),
+            async () =>
+            {
+                DYAccessTokenReq req = new()
+                {
+                    appid = gameApp.GameApp.AppId,
+                    secret = gameApp.GameApp.AppSecret,
+                    grant_type = "client_credential"
+                };
+                var res = await _dyOAuthClient.GetAccessToken(req);
+                return res.data.access_token;
+            }
+        );
     }
 
     public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string token)
@@ -92,7 +91,7 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
         grDto.GameApp = null;
         return await Task.FromResult(grDto);
     }
-    
+
     public override async Task Init(Session session)
     {
         _roomSessionDict.AddOrUpdate(session.RoomId, new DYRoomSession { Session = session }, (k, v) => v);
@@ -152,7 +151,7 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
         };
         await _dYClient.Ack(param, accessToken);
     }
-    
+
     protected override async Task DoPeriodTask()
     {
         foreach (var k in _roomSessionDict.Keys)
@@ -160,12 +159,12 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
             await DoRoomTask(k);
         }
     }
-    
+
     public static HashSet<string> GetObjMsgTypes()
     {
         return ["user_group_push"];
     }
-    
+
     public static HashSet<string> GetArrMsgTypes()
     {
         return ["live_comment", "live_like", "live_gift"];

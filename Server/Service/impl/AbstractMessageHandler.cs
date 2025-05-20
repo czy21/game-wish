@@ -22,6 +22,80 @@ public abstract class AbstractMessageHandler : BackgroundService, IMessageHandle
         _redisDatabase = redisDatabase;
     }
 
+    /// <summary>
+    /// 分布式锁设置缓存并获取
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="fetchFunc"></param>
+    /// <param name="lockExpire">锁过期时间(秒)</param>
+    /// <param name="fetchCacheMaxCount">从缓存中获取最大重试次数</param>
+    /// <param name="keyExpire">key过期时间(秒)</param>
+    /// <param name="keyPreExpire">key预过期时间(秒)</param>
+    /// <returns></returns>
+    protected async Task<string> GetCacheValue(string key, Func<Task<string>> fetchFunc, long lockExpire = 5, long fetchCacheMaxCount = 5, long keyExpire = 3600, long keyPreExpire = 300)
+    {
+        key = $"{{{key}}}";
+        var expireKey = $"{key}:expire";
+
+        var value = await _redisDatabase.StringGetAsync(key);
+        var expireAt = await _redisDatabase.StringGetAsync(expireKey);
+
+        if (!string.IsNullOrEmpty(value) && !string.IsNullOrEmpty(expireAt) && DateTimeOffset.Now.ToUnixTimeMilliseconds() < long.Parse(expireAt) - keyPreExpire * 1000)
+        {
+            return value;
+        }
+
+        var lockKey = $"{key}:lock";
+        var lockVal = Guid.NewGuid().ToString();
+        var lockRet = await _redisDatabase.StringSetAsync(lockKey, lockVal, TimeSpan.FromSeconds(lockExpire), When.NotExists, CommandFlags.None);
+
+        if (lockRet)
+        {
+            try
+            {
+                value = await _redisDatabase.StringGetAsync(key);
+                expireAt = await _redisDatabase.StringGetAsync(expireKey);
+                if (!string.IsNullOrEmpty(value) && !string.IsNullOrEmpty(expireAt) && DateTimeOffset.Now.ToUnixTimeMilliseconds() < long.Parse(expireAt) - keyPreExpire * 1000)
+                {
+                    return value;
+                }
+
+                var newValue = await fetchFunc();
+                if (!string.IsNullOrEmpty(newValue))
+                {
+                    await _redisDatabase.ScriptEvaluateAsync(
+                        """
+                        local newToken = ARGV[1]
+                        local expireSeconds = tonumber(ARGV[2])
+                        local expireTimestamp = tonumber(ARGV[3])
+                        redis.call('SET', KEYS[1], newToken, 'EX', expireSeconds)
+                        redis.call('SET', KEYS[2], expireTimestamp, 'EX', expireSeconds)
+                        return 1
+                        """,
+                        [key, expireKey],
+                        [newValue, keyExpire, DateTimeOffset.Now.ToUnixTimeMilliseconds() + keyExpire * 1000]);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Set {Key} cache fail", key);
+                await _redisDatabase.ScriptEvaluateAsync("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end", [lockKey], [lockVal]);
+            }
+        }
+
+        var fetchCacheCount = 0;
+        do
+        {
+            _logger.LogDebug("Getting {Key} from cache; Attempt {FetchCacheCount}", key, fetchCacheCount + 1);
+            value = await _redisDatabase.StringGetAsync(key);
+            if (!string.IsNullOrEmpty(value)) break;
+            await Task.Delay(200 * fetchCacheCount);
+            fetchCacheCount++;
+        } while (fetchCacheCount < fetchCacheMaxCount);
+
+        return value;
+    }
+
     public abstract PlatformEnum GetPlatform();
     public abstract Task<string> GetAccessToken(string gameCode);
 

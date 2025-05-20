@@ -89,13 +89,13 @@ public class WebSocketController : ControllerBase
     {
         if (string.IsNullOrEmpty(message) || messageHandler == null) return;
 
-        var messageDTO = JsonUtil.Deserialize<MessageDTO>(message);
-        if (messageDTO == null) return;
+        var messageDto = JsonUtil.Deserialize<MessageDTO>(message);
+        if (messageDto == null) return;
 
-        var methodInfo = messageHandler.GetType()
+        var methodInfo = messageHandler
+            .GetType()
             .GetMethods()
-            .Where(m => m.GetCustomAttributes().Any(a => a is OnMessage attr && attr.GetKind() == messageDTO.Kind))
-            .FirstOrDefault();
+            .FirstOrDefault(m => m.GetCustomAttributes().Any(a => a is OnMessage attr && attr.GetKind() == messageDto.Kind));
 
         if (methodInfo != null)
         {
@@ -111,23 +111,22 @@ public class WebSocketController : ControllerBase
                     continue;
                 }
 
-                if (paramType == messageDTO.GetType())
+                if (paramType == messageDto.GetType())
                 {
-                    methodParams[i] = messageDTO;
+                    methodParams[i] = messageDto;
                     continue;
                 }
 
-                if (typeof(IMessage).IsAssignableFrom(paramType))
-                {
-                    var messageObj = (IMessage)JsonUtil.Deserialize(messageDTO.Data, paramType);
-                    if (messageObj == null) return;
+                if (!typeof(IMessage).IsAssignableFrom(paramType)) continue;
+                
+                var messageObj = (IMessage)JsonUtil.Deserialize(messageDto.Data, paramType);
+                if (messageObj == null) return;
 
-                    messageObj.Kind = messageDTO.Kind;
-                    methodParams[i] = messageObj;
-                }
+                messageObj.Kind = messageDto.Kind;
+                methodParams[i] = messageObj;
             }
 
-            if (methodInfo?.Invoke(messageHandler, methodParams) is Task task) await task;
+            if (methodInfo.Invoke(messageHandler, methodParams) is Task task) await task;
         }
     }
 }

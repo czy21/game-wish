@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using StackExchange.Redis;
 using Sunny.Framework.External.Client;
+using Sunny.Framework.External.Client.DY;
 using Sunny.Framework.External.Client.KS;
 using Sunny.Framework.External.Util;
 using WishServer.Model;
@@ -50,21 +51,21 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
     
     public override async Task<string> GetAccessToken(string gameCode)
     {
-        string accessToken = await _redisDatabase.StringGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode));
-        if (!string.IsNullOrEmpty(accessToken)) return accessToken;
-
         var gameApp = await GetGameApp(gameCode);
-        KSAccessTokenReq req = new()
-        {
-            app_id = gameApp.GameApp.AppId,
-            app_secret = gameApp.GameApp.AppSecret,
-            grant_type = "client_credentials"
-        };
 
-        var res = await _ksClient.GetAccessToken(req);
-        if (res.result == 1) accessToken = await _redisDatabase.StringSetAndGetAsync(((IMessageHandler)this).GetAccessTokenKey(gameCode), res.access_token, TimeSpan.FromHours(1));
-
-        return accessToken;
+        return await GetCacheValue(((IMessageHandler)this).GetAccessTokenKey(gameCode),
+            async () =>
+            {
+                KSAccessTokenReq req = new()
+                {
+                    app_id = gameApp.GameApp.AppId,
+                    app_secret = gameApp.GameApp.AppSecret,
+                    grant_type = "client_credentials"
+                };
+                var res = await _ksClient.GetAccessToken(req);
+                return res.access_token;
+            }
+        );
     }
 
     public async Task<GameRoomDTO> GetLiveInfo(string gameCode, string roomId)

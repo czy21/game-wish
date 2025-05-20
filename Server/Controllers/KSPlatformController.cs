@@ -107,7 +107,7 @@ public class KSPlatformController : Controller
                 break;
         }
 
-        var setMsgSuccess = await _redisDatabase.StringSetAsync(((IMessageHandler)_ksPlatformService).GetMsgKey(msgId), 1, TimeSpan.FromMinutes(10), When.NotExists);
+        var setMsgSuccess = await _redisDatabase.StringSetAsync(((IMessageHandler)_ksPlatformService).GetMsgKey(msgId), 1, TimeSpan.FromMinutes(2), When.NotExists);
         if (!setMsgSuccess) return await Task.FromResult(new Dictionary<string, object> { { "result", 1 }, { "errorMsg", "" } });
         
         if (KSPlatformService.GetAckMsgTypes().Contains(msgType))
