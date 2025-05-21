@@ -1,4 +1,5 @@
 ﻿using StackExchange.Redis;
+using Sunny.Framework.Cache;
 using WishServer.Controllers;
 using WishServer.Extension;
 using WishServer.Model;
@@ -10,9 +11,9 @@ public class RoomManager : BackgroundService, IServiceBase
 {
     private readonly IConnectionMultiplexer _redis;
 
-    public RoomManager(IConnectionMultiplexer redis)
+    public RoomManager(RedisDataSource redisDataSource)
     {
-        _redis = redis;
+        _redis = redisDataSource.GetDefault();
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

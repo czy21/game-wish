@@ -1,4 +1,6 @@
-﻿namespace WishServer;
+﻿using Sunny.Framework.Cache;
+
+namespace WishServer;
 
 public class AppSetting
 {
@@ -13,14 +15,9 @@ public class AppSetting
 
 public class ConfigData
 {
-    public ConfigDataRedis Redis { get; set; } = new();
+    public RedisProperties Redis { get; set; } = new();
 
     public ConfigDataMySQL MySQL { get; set; } = new();
-}
-
-public class ConfigDataRedis
-{
-    public string Url { get; set; }
 }
 
 public class ConfigDataMySQL

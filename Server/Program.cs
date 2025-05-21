@@ -1,10 +1,9 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using Autofac;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Refit;
 using StackExchange.Redis;
+using Sunny.Framework.Cache;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.Web;
 using Sunny.Framework.Web.Middleware;
@@ -30,9 +29,7 @@ builder.Services.AddDbContext<AppDbContext>(opt => opt.UseMySQL(builder.Configur
 
 builder.Services.ConfigureDbContext<AppDbContext>(opt => opt.EnableSensitiveDataLogging());
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(c => ConnectionMultiplexer.Connect(builder.Configuration.Get<AppSetting>().Data.Redis.Url));
-
-builder.Services.AddSingleton(c => c.GetService<IConnectionMultiplexer>().GetDatabase());
+builder.Services.AddSingleton<RedisDataSource>();
 
 builder.Services.AddScoped<RefitLogHandler>();
 

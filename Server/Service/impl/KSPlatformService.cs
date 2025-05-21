@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using StackExchange.Redis;
+using Sunny.Framework.Cache;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.DY;
 using Sunny.Framework.External.Client.KS;
@@ -17,18 +17,17 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
     private readonly IKSClient _ksClient;
 
     private readonly ILogger<DYPlatformService> _logger;
-    private readonly IDatabase _redisDatabase;
     private readonly ConcurrentDictionary<string, KSRoomSession> _roomSessionDict = new();
 
     public KSPlatformService(
         ILogger<DYPlatformService> logger,
         IGameAppRepository gameAppRepository,
-        IDatabase redisDatabase,
+        RedisDataSource redisDataSource,
         IKSClient ksClient
-    ) : base(logger, gameAppRepository, redisDatabase)
+    ) : base(logger, gameAppRepository, redisDataSource.GetInstance("Token").GetDatabase())
     {
         _logger = logger;
-        _redisDatabase = redisDatabase;
+        redisDataSource.GetDefault().GetDatabase();
         _ksClient = ksClient;
     }
 

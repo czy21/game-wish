@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using StackExchange.Redis;
+using Sunny.Framework.Cache;
 using Sunny.Framework.External.Client;
 using Sunny.Framework.External.Client.DY;
 using Sunny.Framework.External.Util;
@@ -23,13 +24,13 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
     public DYPlatformService(
         ILogger<DYPlatformService> logger,
         IGameAppRepository gameAppRepository,
-        IDatabase redisDatabase,
+        RedisDataSource redisDataSource,
         IDYOAuthClient dYoAuthClient,
         IDYClient dyClient
-    ) : base(logger, gameAppRepository, redisDatabase)
+    ) : base(logger, gameAppRepository, redisDataSource.GetInstance("Token").GetDatabase())
     {
         _logger = logger;
-        _redisDatabase = redisDatabase;
+        _redisDatabase = redisDataSource.GetDefault().GetDatabase();
         _dyOAuthClient = dYoAuthClient;
         _dYClient = dyClient;
     }
