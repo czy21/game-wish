@@ -8,7 +8,7 @@
 
         <PublishSingleFile>true</PublishSingleFile>
         <SelfContained>false</SelfContained>
-        <PublishDir>$(SolutionDir)build\</PublishDir>
+        <PublishDir>build</PublishDir>
         <AssemblyName>api</AssemblyName>
     </PropertyGroup>
 
