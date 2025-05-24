@@ -8,14 +8,12 @@ namespace WishServer.Manager;
 
 public class RoomManager : IServiceBase
 {
-    private readonly RedisDataSource _redisDataSource;
-    private readonly IConnectionMultiplexer _redis;
-    private readonly ConcurrentDictionary<string, CancellationTokenSource> _roomConsumers = new();
+    private readonly IDatabase _redisDatabase;
+    private static readonly ConcurrentDictionary<string, CancellationTokenSource> RoomIdConsumerDict = new();
 
     public RoomManager(RedisDataSource redisDataSource)
     {
-        _redisDataSource = redisDataSource;
-        _redis = redisDataSource.GetDefault();
+        _redisDatabase = redisDataSource.GetDefault().GetDatabase();
     }
 
     private static string GetRoomKey(PlatformEnum platform, string roomId)
@@ -27,16 +25,16 @@ public class RoomManager : IServiceBase
     {
         var key = $"{platform}:{roomId}";
         var cts = new CancellationTokenSource();
-        _roomConsumers[key] = cts;
+        RoomIdConsumerDict.AddOrUpdate(key, cts, (k, v) => v);
 
-        var consumer = new RoomConsumer(_redisDataSource, platform, roomId, GetRoomKey(platform, roomId));
+        var consumer = new RoomConsumer(_redisDatabase, platform, roomId, GetRoomKey(platform, roomId));
         Task.Run(() => consumer.StartAsync(cts.Token), cts.Token);
     }
 
     public void StopRoomConsumer(PlatformEnum platform, string roomId)
     {
         var key = $"{platform}:{roomId}";
-        if (_roomConsumers.TryRemove(key, out var cts))
+        if (RoomIdConsumerDict.TryRemove(key, out var cts))
         {
             cts.Cancel();
         }
@@ -44,6 +42,6 @@ public class RoomManager : IServiceBase
 
     public async Task SendMessage(PlatformEnum platform, string roomId, string message)
     {
-        await _redis.GetDatabase().StreamAddAsync(GetRoomKey(platform, roomId), [new NameValueEntry("message", message)]);
+        await _redisDatabase.StreamAddAsync(GetRoomKey(platform, roomId), [new NameValueEntry("message", message)]);
     }
 }

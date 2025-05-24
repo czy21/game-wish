@@ -38,10 +38,22 @@ public class DYPlatformController : Controller
         return await _dyPlatformService.GetLiveInfo(gameCode, token);
     }
 
+    [HttpHead("test")]
+    public IActionResult Test()
+    {
+        return Ok();
+    }
+
     [HttpPost("test")]
     public async Task<CommonResult<object>> Test([FromQuery(Name = "gameCode")] string gameCode)
     {
         return await OnMessage(gameCode);
+    }
+
+    [HttpHead("push")]
+    public IActionResult Push()
+    {
+        return Ok();
     }
 
     [HttpPost("push")]

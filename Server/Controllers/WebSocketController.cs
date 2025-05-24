@@ -8,13 +8,14 @@ using WishServer.Extension;
 using WishServer.Manager;
 using WishServer.Model;
 using WishServer.Service;
+using WishServer.Service.impl;
 using WishServer.Util;
 
 namespace WishServer.Controllers;
 
 public class WebSocketController : ControllerBase
 {
-    public static readonly ConcurrentDictionary<string, Session> CLIENTID_SESION_DICT = new();
+    public static readonly ConcurrentDictionary<string, Session> ClientIdSessionDict = new();
     private readonly ILogger<WebSocketController> _logger;
     private readonly Dictionary<PlatformEnum, IMessageHandler> _messageHandlerDict;
     private readonly RoomManager _roomManager;
@@ -54,13 +55,12 @@ public class WebSocketController : ControllerBase
             Platform = (PlatformEnum)platform,
             RoomId = roomId
         };
-        
+        ClientIdSessionDict.TryAdd(session.ClientId, session);
         if (_messageHandlerDict.TryGetValue((PlatformEnum)platform, out var messageHandler)) await messageHandler.Init(session);
-        CLIENTID_SESION_DICT.TryAdd(session.ClientId, session);
         
         _roomManager.StartRoomConsumer(session.Platform, session.RoomId);
         
-        _logger.LogInformation($"Client {session.ClientId} connected. Total clients: {CLIENTID_SESION_DICT.Count}");
+        _logger.LogInformation($"Client {session.ClientId} connected. Total clients: {ClientIdSessionDict.Count}");
 
         var buffer = new byte[1024 * 4];
         while (session.WebSocket.State == WebSocketState.Open)
@@ -86,10 +86,10 @@ public class WebSocketController : ControllerBase
         
         if (messageHandler != null) await messageHandler.Exit(session);
         
-        CLIENTID_SESION_DICT.TryRemove(session.ClientId, out _);
+        ClientIdSessionDict.TryRemove(session.ClientId, out _);
         await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
         session.WebSocket.Dispose();
-        _logger.LogInformation($"Client {session.ClientId} disconnected. Total clients: {CLIENTID_SESION_DICT.Count}");
+        _logger.LogInformation($"Client {session.ClientId} disconnected. Total clients: {ClientIdSessionDict.Count}");
     }
 
     public async Task HandleMessage(IMessageHandler messageHandler, Session session, string message)

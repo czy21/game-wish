@@ -17,7 +17,7 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
     private readonly IKSClient _ksClient;
 
     private readonly ILogger<DYPlatformService> _logger;
-    private readonly ConcurrentDictionary<string, KSRoomSession> _roomSessionDict = new();
+    private static readonly ConcurrentDictionary<string, KSRoomSession> RoomIdSessionDict = new();
 
     public KSPlatformService(
         ILogger<DYPlatformService> logger,
@@ -74,13 +74,13 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
     
     public override async Task Init(Session session)
     {
-        _roomSessionDict.AddOrUpdate(session.RoomId, new KSRoomSession { Session = session }, (k, v) => v);
+        RoomIdSessionDict.AddOrUpdate(session.RoomId, new KSRoomSession { Session = session }, (k, v) => v);
         await DoRoomTask(session.RoomId);
     }
 
     public async Task DoRoomTask(string roomId)
     {
-        var roomSession = _roomSessionDict[roomId];
+        var roomSession = RoomIdSessionDict[roomId];
         if (roomSession.Bind.TaskStatus != "SUCCESS")
         {
             var accessToken = await GetAccessToken(roomSession.Session.GameCode);
@@ -94,13 +94,13 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
             };
             param["sign"] = SignatureRequest(roomSession.Session.GameCode, param);
             var res = await _ksClient.Bind(gameApp.GameApp.AppId, accessToken, param);
-            if (res.result == 1) _roomSessionDict[roomId].Bind.TaskStatus = "SUCCESS";
+            if (res.result == 1) RoomIdSessionDict[roomId].Bind.TaskStatus = "SUCCESS";
         }
     }
 
     public override async Task Exit(Session session)
     {
-        var removeRooms = _roomSessionDict.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
+        var removeRooms = RoomIdSessionDict.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
         foreach (var r in removeRooms)
         {
             var accessToken = await GetAccessToken(r.Value.Session.GameCode);
@@ -114,7 +114,7 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
             };
             param["sign"] = SignatureRequest(r.Value.Session.GameCode, param);
             await _ksClient.Bind(gameApp.GameApp.AppId, accessToken, param);
-            _roomSessionDict.TryRemove(r.Key, out _);
+            RoomIdSessionDict.TryRemove(r.Key, out _);
         }
     }
 
@@ -135,7 +135,7 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
 
     protected override async Task DoPeriodTask()
     {
-        foreach (var k in _roomSessionDict.Keys)
+        foreach (var k in RoomIdSessionDict.Keys)
         {
             await DoRoomTask(k);
         }
