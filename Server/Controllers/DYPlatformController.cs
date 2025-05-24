@@ -139,7 +139,7 @@ public class DYPlatformController : Controller
             await _dyPlatformService.Ack(gameCode, roomId, 1, ackData);
         }
 
-        await _roomManager.SendMessageToRoom(_dyPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDTO));
+        await _roomManager.SendMessage(_dyPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDTO));
         return await Task.FromResult(CommonResult<object>.Ok(new object()));
     }
 

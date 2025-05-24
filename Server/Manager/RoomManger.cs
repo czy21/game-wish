@@ -1,48 +1,49 @@
-﻿using StackExchange.Redis;
+﻿using System.Collections.Concurrent;
+using StackExchange.Redis;
 using Sunny.Framework.Cache;
-using WishServer.Controllers;
-using WishServer.Extension;
 using WishServer.Model;
 using WishServer.Service;
 
 namespace WishServer.Manager;
 
-public class RoomManager : BackgroundService, IServiceBase
+public class RoomManager : IServiceBase
 {
+    private readonly RedisDataSource _redisDataSource;
     private readonly IConnectionMultiplexer _redis;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _roomConsumers = new();
 
     public RoomManager(RedisDataSource redisDataSource)
     {
+        _redisDataSource = redisDataSource;
         _redis = redisDataSource.GetDefault();
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    private static string GetRoomKey(PlatformEnum platform, string roomId)
     {
-        var sub = _redis.GetSubscriber();
-
-        sub.Subscribe(new RedisChannel("game:ROOM_CHANNEL:*", RedisChannel.PatternMode.Pattern), (channel, value) =>
-        {
-            Task.Run(async () =>
-            {
-                var platform = channel.ToString().Split(':')[2];
-                var roomId = channel.ToString().Split(':')[3];
-                var session = WebSocketController.CLIENTID_SESION_DICT.FirstOrDefault(t => t.Value.Platform.ToString() == platform && t.Value.RoomId == roomId).Value;
-                if (session != null) await session.WebSocket.SendTextAsync(value);
-            }, stoppingToken);
-        });
-        return Task.CompletedTask;
+        return $"game:ROOM_STREAM:{platform}:{roomId}";
     }
 
-    public async Task SendMessageToRoom(PlatformEnum platform, string roomId, string message)
+    public void StartRoomConsumer(PlatformEnum platform, string roomId)
     {
-        var session = WebSocketController.CLIENTID_SESION_DICT.FirstOrDefault(t => t.Value.Platform == platform && t.Value.RoomId == roomId).Value;
-        if (session == null)
+        var key = $"{platform}:{roomId}";
+        var cts = new CancellationTokenSource();
+        _roomConsumers[key] = cts;
+
+        var consumer = new RoomConsumer(_redisDataSource, platform, roomId, GetRoomKey(platform, roomId));
+        Task.Run(() => consumer.StartAsync(cts.Token), cts.Token);
+    }
+
+    public void StopRoomConsumer(PlatformEnum platform, string roomId)
+    {
+        var key = $"{platform}:{roomId}";
+        if (_roomConsumers.TryRemove(key, out var cts))
         {
-            await _redis.GetSubscriber().PublishAsync(new RedisChannel($"game:ROOM_CHANNEL:{platform}:{roomId}", RedisChannel.PatternMode.Pattern), message);
+            cts.Cancel();
         }
-        else
-        {
-            await session.WebSocket.SendTextAsync(message);
-        }
+    }
+
+    public async Task SendMessage(PlatformEnum platform, string roomId, string message)
+    {
+        await _redis.GetDatabase().StreamAddAsync(GetRoomKey(platform, roomId), [new NameValueEntry("message", message)]);
     }
 }

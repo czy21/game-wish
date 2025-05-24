@@ -122,7 +122,7 @@ public class KSPlatformController : Controller
             await _ksPlatformService.Ack(gameCode, roomId, "cpClientReceive", actData);
         }
 
-        await _roomManager.SendMessageToRoom(_ksPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDto));
+        await _roomManager.SendMessage(_ksPlatformService.GetPlatform(), roomId, JsonUtil.Serialize(gameMessageDto));
 
         return await Task.FromResult(new Dictionary<string, object> { { "result", 1 }, { "errorMsg", "" } });
     }

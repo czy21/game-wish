@@ -12,15 +12,13 @@ public class ABPlatformService : IMessageHandler
     private readonly AppSetting _config;
 
     private readonly ILogger<DYPlatformService> _logger;
-    private readonly IDatabase _redisDatabase;
 
     private readonly ConcurrentDictionary<string, RoomSession> ROOM_SESSION_DICT = new();
 
-    public ABPlatformService(ILogger<DYPlatformService> logger, IOptions<AppSetting> options, IDatabase redisDatabase)
+    public ABPlatformService(ILogger<DYPlatformService> logger, IOptions<AppSetting> options)
     {
         _logger = logger;
         _config = options.Value;
-        _redisDatabase = redisDatabase;
     }
 
     public PlatformEnum GetPlatform()

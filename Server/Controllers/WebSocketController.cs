@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using WishServer.Annotation;
 using WishServer.Extension;
+using WishServer.Manager;
 using WishServer.Model;
 using WishServer.Service;
 using WishServer.Util;
@@ -16,11 +17,13 @@ public class WebSocketController : ControllerBase
     public static readonly ConcurrentDictionary<string, Session> CLIENTID_SESION_DICT = new();
     private readonly ILogger<WebSocketController> _logger;
     private readonly Dictionary<PlatformEnum, IMessageHandler> _messageHandlerDict;
+    private readonly RoomManager _roomManager;
 
-    public WebSocketController(ILogger<WebSocketController> logger, IEnumerable<IMessageHandler> messageHandlers)
+    public WebSocketController(ILogger<WebSocketController> logger, IEnumerable<IMessageHandler> messageHandlers,RoomManager roomManager)
     {
         _logger = logger;
         _messageHandlerDict = messageHandlers.ToDictionary(k => k.GetPlatform(), v => v);
+        _roomManager = roomManager;
     }
 
     [Route("/socket")]
@@ -51,10 +54,12 @@ public class WebSocketController : ControllerBase
             Platform = (PlatformEnum)platform,
             RoomId = roomId
         };
+        
         if (_messageHandlerDict.TryGetValue((PlatformEnum)platform, out var messageHandler)) await messageHandler.Init(session);
-
         CLIENTID_SESION_DICT.TryAdd(session.ClientId, session);
-
+        
+        _roomManager.StartRoomConsumer(session.Platform, session.RoomId);
+        
         _logger.LogInformation($"Client {session.ClientId} connected. Total clients: {CLIENTID_SESION_DICT.Count}");
 
         var buffer = new byte[1024 * 4];
@@ -76,9 +81,11 @@ public class WebSocketController : ControllerBase
             {
                 _logger.LogError($"Error with client {session.ClientId}: {ex.Message}");
             }
-
+        
+        _roomManager.StopRoomConsumer(session.Platform, session.RoomId);
+        
         if (messageHandler != null) await messageHandler.Exit(session);
-
+        
         CLIENTID_SESION_DICT.TryRemove(session.ClientId, out _);
         await session.WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
         session.WebSocket.Dispose();
