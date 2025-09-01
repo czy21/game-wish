@@ -14,13 +14,12 @@ namespace WishServer.Service.impl;
 
 public class DYPlatformService : AbstractMessageHandler, IMessageHandler
 {
+    
     private readonly ILogger<DYPlatformService> _logger;
+    private static readonly ConcurrentDictionary<string, DYRoomSession> RoomIdSessionDict = new();
     
     private readonly IDYClient _dYClient;
     private readonly IDYOAuthClient _dyOAuthClient;
-    
-    private readonly IDatabase _redisDatabase;
-    private static readonly ConcurrentDictionary<string, DYRoomSession> RoomIdSessionDict = new();
 
     public DYPlatformService(
         ILogger<DYPlatformService> logger,
@@ -28,10 +27,9 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
         RedisDataSource redisDataSource,
         IDYOAuthClient dYoAuthClient,
         IDYClient dyClient
-    ) : base(logger, gameAppRepository, redisDataSource.GetInstance("Token").GetDatabase())
+    ) : base(logger, gameAppRepository, redisDataSource.GetInstance("Token").GetDatabase(),redisDataSource.GetDefault().GetDatabase())
     {
         _logger = logger;
-        _redisDatabase = redisDataSource.GetDefault().GetDatabase();
         _dyOAuthClient = dYoAuthClient;
         _dYClient = dyClient;
     }
@@ -86,7 +84,7 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
                 AvatarUrl = res.data?.info?.avatar_url,
                 Nickname = res.data?.info?.nick_name
             };
-            await _redisDatabase.StringSetAsync(((IMessageHandler)this).GetRoomKey(grDto.RoomId), JsonUtil.Serialize(grDto), TimeSpan.FromDays(1));
+            await _redisDefaultDatabase.StringSetAsync(((IMessageHandler)this).GetRoomKey(grDto.RoomId), JsonUtil.Serialize(grDto), TimeSpan.FromDays(1));
         }
 
         grDto.Game = null;
@@ -98,6 +96,7 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
     {
         RoomIdSessionDict.AddOrUpdate(session.RoomId, new DYRoomSession { Session = session }, (k, v) => v);
         await DoRoomTask(session.RoomId);
+        await SetRoomConnect(session);
     }
 
     public async Task DoRoomTask(string roomId)
@@ -137,6 +136,7 @@ public class DYPlatformService : AbstractMessageHandler, IMessageHandler
                         msg_type = t.TaskType
                     }, accessToken);
             RoomIdSessionDict.TryRemove(r.Key, out _);
+            await DelRoomConnect(r.Value.Session);
         }
     }
 

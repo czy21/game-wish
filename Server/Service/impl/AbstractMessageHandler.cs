@@ -9,17 +9,20 @@ public abstract class AbstractMessageHandler : BackgroundService, IMessageHandle
 {
     private readonly IGameAppRepository _gameAppRepository;
     private readonly ILogger<DYPlatformService> _logger;
-    private readonly IDatabase _redisDatabase;
+    internal readonly IDatabase _redisTokenDatabase;
+    internal readonly IDatabase _redisDefaultDatabase;
 
     protected AbstractMessageHandler(
         ILogger<DYPlatformService> logger,
         IGameAppRepository gameAppRepository,
-        IDatabase redisDatabase
+        IDatabase redisTokenDatabase,
+        IDatabase redisDefaultDatabase
     )
     {
         _logger = logger;
         _gameAppRepository = gameAppRepository;
-        _redisDatabase = redisDatabase;
+        _redisTokenDatabase = redisTokenDatabase;
+        _redisDefaultDatabase = redisDefaultDatabase;
     }
 
     /// <summary>
@@ -37,8 +40,8 @@ public abstract class AbstractMessageHandler : BackgroundService, IMessageHandle
         key = $"{{{key}}}";
         var expireKey = $"{key}:expire";
 
-        var value = await _redisDatabase.StringGetAsync(key);
-        var expireAt = await _redisDatabase.StringGetAsync(expireKey);
+        var value = await _redisTokenDatabase.StringGetAsync(key);
+        var expireAt = await _redisTokenDatabase.StringGetAsync(expireKey);
 
         if (!string.IsNullOrEmpty(value) && !string.IsNullOrEmpty(expireAt) && DateTimeOffset.Now.ToUnixTimeMilliseconds() < long.Parse(expireAt) - keyPreExpire * 1000)
         {
@@ -47,14 +50,14 @@ public abstract class AbstractMessageHandler : BackgroundService, IMessageHandle
 
         var lockKey = $"{key}:lock";
         var lockVal = Guid.NewGuid().ToString();
-        var lockRet = await _redisDatabase.StringSetAsync(lockKey, lockVal, TimeSpan.FromSeconds(lockExpire), When.NotExists, CommandFlags.None);
+        var lockRet = await _redisTokenDatabase.StringSetAsync(lockKey, lockVal, TimeSpan.FromSeconds(lockExpire), When.NotExists, CommandFlags.None);
 
         if (lockRet)
         {
             try
             {
-                value = await _redisDatabase.StringGetAsync(key);
-                expireAt = await _redisDatabase.StringGetAsync(expireKey);
+                value = await _redisTokenDatabase.StringGetAsync(key);
+                expireAt = await _redisTokenDatabase.StringGetAsync(expireKey);
                 if (!string.IsNullOrEmpty(value) && !string.IsNullOrEmpty(expireAt) && DateTimeOffset.Now.ToUnixTimeMilliseconds() < long.Parse(expireAt) - keyPreExpire * 1000)
                 {
                     return value;
@@ -63,7 +66,7 @@ public abstract class AbstractMessageHandler : BackgroundService, IMessageHandle
                 var newValue = await fetchFunc();
                 if (!string.IsNullOrEmpty(newValue))
                 {
-                    await _redisDatabase.ScriptEvaluateAsync(
+                    await _redisTokenDatabase.ScriptEvaluateAsync(
                         """
                         local newToken = ARGV[1]
                         local expireSeconds = tonumber(ARGV[2])
@@ -79,7 +82,7 @@ public abstract class AbstractMessageHandler : BackgroundService, IMessageHandle
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Set {Key} cache fail", key);
-                await _redisDatabase.ScriptEvaluateAsync("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end", [lockKey], [lockVal]);
+                await _redisTokenDatabase.ScriptEvaluateAsync("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end", [lockKey], [lockVal]);
             }
         }
 
@@ -87,7 +90,7 @@ public abstract class AbstractMessageHandler : BackgroundService, IMessageHandle
         do
         {
             _logger.LogDebug("Getting {Key} from cache; Attempt {FetchCacheCount}", key, fetchCacheCount + 1);
-            value = await _redisDatabase.StringGetAsync(key);
+            value = await _redisTokenDatabase.StringGetAsync(key);
             if (!string.IsNullOrEmpty(value)) break;
             await Task.Delay(200 * fetchCacheCount);
             fetchCacheCount++;
@@ -114,6 +117,21 @@ public abstract class AbstractMessageHandler : BackgroundService, IMessageHandle
 
     public abstract Task Init(Session session);
     public abstract Task Exit(Session session);
+
+    private string GetRoomConnectKey(Session session)
+    {
+        return string.Join(":", "game", "ROOM_CONNECT", GetPlatform(), session.RoomId);
+    }
+    
+    protected async Task SetRoomConnect(Session session)
+    {
+        await _redisDefaultDatabase.StringSetAsync(GetRoomConnectKey(session), session.ConnectionInfo.LocalIpAddress + ":" + session.ConnectionInfo.LocalPort);
+    }
+
+    protected async Task DelRoomConnect(Session session)
+    {
+        await _redisDefaultDatabase.KeyDeleteAsync(GetRoomConnectKey(session));
+    }
 
     protected async Task<GameAppBO> GetGameApp(string gameCode)
     {

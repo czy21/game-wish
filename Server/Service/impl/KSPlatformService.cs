@@ -14,17 +14,17 @@ namespace WishServer.Service.impl;
 
 public class KSPlatformService : AbstractMessageHandler, IMessageHandler
 {
-    private readonly IKSClient _ksClient;
-
     private readonly ILogger<DYPlatformService> _logger;
     private static readonly ConcurrentDictionary<string, KSRoomSession> RoomIdSessionDict = new();
+    
+    private readonly IKSClient _ksClient;
 
     public KSPlatformService(
         ILogger<DYPlatformService> logger,
         IGameAppRepository gameAppRepository,
         RedisDataSource redisDataSource,
         IKSClient ksClient
-    ) : base(logger, gameAppRepository, redisDataSource.GetInstance("Token").GetDatabase())
+    ) : base(logger, gameAppRepository, redisDataSource.GetInstance("Token").GetDatabase(),redisDataSource.GetDefault().GetDatabase())
     {
         _logger = logger;
         redisDataSource.GetDefault().GetDatabase();
@@ -76,6 +76,7 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
     {
         RoomIdSessionDict.AddOrUpdate(session.RoomId, new KSRoomSession { Session = session }, (k, v) => v);
         await DoRoomTask(session.RoomId);
+        await SetRoomConnect(session);
     }
 
     public async Task DoRoomTask(string roomId)
@@ -115,6 +116,7 @@ public class KSPlatformService : AbstractMessageHandler, IMessageHandler
             param["sign"] = SignatureRequest(r.Value.Session.GameCode, param);
             await _ksClient.Bind(gameApp.GameApp.AppId, accessToken, param);
             RoomIdSessionDict.TryRemove(r.Key, out _);
+            await DelRoomConnect(r.Value.Session);
         }
     }
 

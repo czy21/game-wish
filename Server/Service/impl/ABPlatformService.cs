@@ -1,27 +1,33 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using Sunny.Framework.Cache;
 using WishServer.Annotation;
 using WishServer.Extension;
 using WishServer.Model;
+using WishServer.Repository;
 
 namespace WishServer.Service.impl;
 
-public class ABPlatformService : IMessageHandler
+public class ABPlatformService : AbstractMessageHandler,IMessageHandler
 {
-    private readonly AppSetting _config;
 
     private readonly ILogger<DYPlatformService> _logger;
+    private readonly ConcurrentDictionary<string, RoomSession> RoomIdSessionDict = new();
+    
+    private readonly AppSetting _config;
 
-    private readonly ConcurrentDictionary<string, RoomSession> ROOM_SESSION_DICT = new();
-
-    public ABPlatformService(ILogger<DYPlatformService> logger, IOptions<AppSetting> options)
+    public ABPlatformService(ILogger<DYPlatformService> logger,
+        IGameAppRepository gameAppRepository,
+        RedisDataSource redisDataSource,
+        IOptions<AppSetting> options
+    ) : base(logger, gameAppRepository, redisDataSource.GetInstance("Token").GetDatabase(),redisDataSource.GetDefault().GetDatabase())
     {
         _logger = logger;
         _config = options.Value;
     }
 
-    public PlatformEnum GetPlatform()
+    public override PlatformEnum GetPlatform()
     {
         return PlatformEnum.AB;
     }
@@ -31,21 +37,29 @@ public class ABPlatformService : IMessageHandler
         throw new NotImplementedException();
     }
 
-    public Task Init(Session session)
+    protected override Task DoPeriodTask()
     {
-        if (session.RoomId == null) return Task.CompletedTask;
-        ROOM_SESSION_DICT.AddOrUpdate(session.RoomId, new RoomSession { Session = session }, (k, v) => v);
-        return Task.CompletedTask;
+        throw new NotImplementedException();
     }
 
-    public Task Exit(Session session)
+    public override async Task Init(Session session)
     {
-        var removeRooms = ROOM_SESSION_DICT.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
-        foreach (var r in removeRooms) ROOM_SESSION_DICT.TryRemove(r.Key, out _);
-        return Task.CompletedTask;
+        if (session.RoomId == null) return;
+        RoomIdSessionDict.AddOrUpdate(session.RoomId, new RoomSession { Session = session }, (k, v) => v);
+        await SetRoomConnect(session);
     }
 
-    public Task<string> GetAccessToken(string gameCode)
+    public override async Task Exit(Session session)
+    {
+        var removeRooms = RoomIdSessionDict.Where(t => t.Value.Session.ClientId == session.ClientId).ToDictionary(k => k.Key, v => v.Value);
+        foreach (var r in removeRooms)
+        {
+            RoomIdSessionDict.TryRemove(r.Key, out _);
+            await DelRoomConnect(r.Value.Session);
+        };
+    }
+
+    public override Task<string> GetAccessToken(string gameCode)
     {
         return Task.FromResult("");
     }
@@ -54,7 +68,7 @@ public class ABPlatformService : IMessageHandler
     {
         if (roomId == null || param == null) return;
 
-        if (ROOM_SESSION_DICT.TryGetValue(roomId, out var roomSession))
+        if (RoomIdSessionDict.TryGetValue(roomId, out var roomSession))
             await roomSession.Session.WebSocket.SendJsonAsnyc(
                 new Dictionary<string, object>
                 {
